@@ -37,12 +37,6 @@
         else
         {
             $casUid = \phpCAS::getUser();
-            if (!cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN))
-            {
-                $response->status = ResponseStatus::STATUT_KO;
-                $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
-                $response->data = array();
-            }
         }
     }
 
@@ -82,24 +76,87 @@
             {
                 $sqlmode = SifacSqlMode::tryFrom($_GET['sqlmode']);
             }           
-        }   
+        } 
+
+        $inputdata = '';
+        if (isset($_POST['inputdata']))
+        {
+            $inputdata = $_POST['inputdata'];
+        }
+        elseif (isset($_GET['inputdata']))
+        {
+            $inputdata = $_GET['inputdata'];
+        } 
 
         switch ($methode)
         {
+            case INTERNALWS_CREATECIAMIDENT :
+                // Attention : On ne peut pas créer une identité via un token bearer
+                // Uniquement via utilisateur CAS
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_CREATE))
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                else
+                {
+                    error_log(basename(__FILE__) . stripAccents(" On va créer une identité..."));
+                    $ciamfunctions = new CiamFunctions();
+                    $response = $ciamfunctions->checkAndCreateIdentity($inputdata, $sqlmode);
+                }
+                break;
             case INTERNALWS_DELCIAMTOKEN :
-                $ciamfunctions = new CiamFunctions();
-                $response = $ciamfunctions->deleteCiamTokenFile();
+                // Si l'utilisateur CAS n'a pas les droits et qu'il n'y a pas de token bearer
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN) and $token == '')
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                else
+                {
+                    $ciamfunctions = new CiamFunctions();
+                    $response = $ciamfunctions->deleteCiamTokenFile();
+                }
                 break;
             case INTERNALWS_DELSIFACTOKEN :
-                $sifacfunctions = new SifacFunctions();
-                $response = $sifacfunctions->deleteSifacTokenFile();
+                // Si l'utilisateur CAS n'a pas les droits et qu'il n'y a pas de token bearer
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN) and $token == '')
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                else
+                {
+                    $sifacfunctions = new SifacFunctions();
+                    $response = $sifacfunctions->deleteSifacTokenFile();
+                }
                 break;
             case INTERNALWS_DELROLECACHE :
-                $sifacfunctions = new SifacFunctions();
-                $response = $sifacfunctions->deleteSifacRoleCache();
+                // Si l'utilisateur CAS n'a pas les droits et qu'il n'y a pas de token bearer
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN) and $token == '')
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                else
+                {
+                    $sifacfunctions = new SifacFunctions();
+                    $response = $sifacfunctions->deleteSifacRoleCache();
+                }
                 break;
             case INTERNALWS_SIFACROLELISTE :
-                if ($sqlmode == '')
+                // Si l'utilisateur CAS n'a pas les droits et qu'il n'y a pas de token bearer
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN) and $token == '')
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                elseif ($sqlmode == '')
                 {
                     $response->status = ResponseStatus::STATUT_KO;
                     $response->description = "Le mode de requête SQL n'est pas défini ou est invalide.";

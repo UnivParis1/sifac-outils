@@ -86,6 +86,7 @@
     const INTERNALWS_DELSIFACTOKEN = 'delsifactoken';
     const INTERNALWS_DELROLECACHE = 'delrolecache';
     const INTERNALWS_SIFACROLELISTE = 'sifacroleliste';
+    const INTERNALWS_CREATECIAMIDENT = 'createciamident';
 
     // Liste des messages d'erreur HTTP possibles dans un CURL
     const HTTP_ERROR_MSG = [100 => "Continue", 

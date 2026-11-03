@@ -482,7 +482,7 @@
 
         try {
             /////////////////////// Mode POST ///////////////////////
-            // postParams = {  method: "POST",
+            // let postParams = {  method: "POST",
             //                 headers: {
             //                             'Accept': 'application/json',
             //                             'Content-Type': 'application/json'
@@ -647,4 +647,175 @@
         }
         return false;
     }
+
+
+    /**
+     * Crée une identité (utilisateur) via un Web Service et affiche le résultat
+     * de l'opération dans un conteneur HTML.
+     *
+     * Le Web Service `createciamident` est appelé en POST et doit retourner un
+     * objet JSON contenant les propriétés `status`, `description` et `data`. En
+     * cas de succès (`status` = 'OK'), `data` contient l'identifiant de
+     * l'utilisateur créé.
+     *
+     * Chaque résultat (succès ou erreur) est ajouté dans `outputDiv` sous la
+     * forme d'un <label> préfixé par `inputData`, de façon à pouvoir enchaîner
+     * plusieurs créations successives (un <br> est inséré avant chaque nouveau
+     * <label> si `outputDiv` en contient déjà un).
+     *
+     * @async
+     *
+     * @param {string} fullWSURL
+     *        URL complète du Web Service à appeler.
+     *
+     * @param {string} sqlMode
+     *        Mode SQL à transmettre au Web Service (ex. "DIRECT", "ECC", etc.).
+     *
+     * @param {string} inputData
+     *        Donnée d'entrée décrivant l'identité à créer, transmise au Web
+     *        Service (propriété `inputdata`) et reprise en préfixe des messages
+     *        affichés.
+     *
+     * @param {HTMLElement} outputDiv
+     *        Conteneur HTML dans lequel les messages de résultat sont ajoutés.
+     *
+     * @returns {Promise<void>}
+     *          Ne retourne rien ; le résultat est affiché dans `outputDiv`.
+     *
+     * @description
+     * - Appelle le Web Service `createciamident`.
+     * - Vérifie le statut HTTP et le statut applicatif (`data.status`).
+     * - Journalise les erreurs dans la console et les affiche dans `outputDiv`
+     *   (et non dans une boîte de dialogue : les appels à
+     *   showModalSingleButton sont commentés).
+     *
+     * @note
+     * Les exceptions générées lors de l'appel au Web Service ou du décodage JSON
+     * sont interceptées, journalisées et affichées dans `outputDiv`. Elles ne
+     * sont pas propagées à l'appelant.
+     *
+     * @note
+     * `outputDiv` est obligatoire : il est utilisé dans tous les cas, y compris
+     * lorsque l'adresse du WS est invalide.
+     */
+    async function createIdentity(fullWSURL, sqlMode, inputData, outputDiv)
+    {
+        let label;
+        let br;
+
+        if (!fullWSURL || fullWSURL.trim() == '' || !isValidHttpUrl(fullWSURL))
+        {
+            if (outputDiv.getElementsByTagName('label').length >0)
+            {
+                br = outputDiv.ownerDocument.createElement('br');
+                outputDiv.appendChild(br);
+            }
+
+            label = outputDiv.ownerDocument.createElement('label');
+            label.innerHTML = inputData + ' ' + "L'adresse du WS n'est pas ou est mal définie.";
+            outputDiv.appendChild(label);
+            // showModalSingleButton('error','Appel d\'un WS','Ok',"L'adresse du WS n'est pas ou est mal définie.");
+            return;
+        }
+
+        // Nettoyage de l'URL en supprimant les doubles "anti-slash" non nécessaires
+        fullWSURL = fullWSURL.replace(/([^:]\/)\/+/g, "$1");
+
+        let methode = 'createciamident';
+        let reponse;
+        let data;
+
+        try {
+            /////////////////////// Mode POST ///////////////////////
+            let postParams = {  method: "POST",
+                            headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json'
+                                        },
+                            body: JSON.stringify({'methode' : methode, 'sqlmode' : sqlMode, 'inputdata' : inputData})
+                            };
+            reponse = await fetch(fullWSURL,postParams);
+            ////////////////////////////////////////////////////////
+            /////////////////////// Mode GET ///////////////////////
+            // reponse = await fetch(fullWSURL + "?methode=" + methode + "&sqlmode=" + encodeURIComponent(sqlMode));
+            ////////////////////////////////////////////////////////
+
+            data = await reponse.json();
+            // On vérifie que la réponse a un format correct : 
+            // Existance des proprités status, description et data qui sont toutes les 3 obligatoires
+            if (!data || !data.hasOwnProperty('status') || !data.hasOwnProperty('description') || !data.hasOwnProperty('data'))
+            {
+                throw new Error("Format de la réponse incorrect.");
+            }
+        } 
+        catch (exception) 
+        {
+            console.log("Une exception s'est produite lors de l'appel au WS : " + exception);
+
+            if (outputDiv.getElementsByTagName('label').length >0)
+            {
+                br = outputDiv.ownerDocument.createElement('br');
+                outputDiv.appendChild(br);
+            }
+
+            let statutInfo = "Erreur WS - méthode : " + methode + " : " + exception;
+            label = outputDiv.ownerDocument.createElement('label');
+            label.innerHTML = inputData + ' ' + statutInfo;
+            outputDiv.appendChild(label);
+            // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
+            return;
+        }
+
+        // L'appel du WS s'est bien passé => On a eu une réponse (ok ou pas mais on a une réponse)
+        if (reponse.ok !== true)
+        {
+            console.log("La réponse lors de l'appel au WS n'est pas ok - fonction : createIdentity : " + reponse.statusText);
+
+            if (outputDiv.getElementsByTagName('label').length >0)
+            {
+                br = outputDiv.ownerDocument.createElement('br');
+                outputDiv.appendChild(br);
+            }
+
+            let statutInfo = "Erreur WS - méthode : " + methode + " : " + reponse.statusText;
+            label = outputDiv.ownerDocument.createElement('label');
+            label.innerHTML = inputData + ' ' + statutInfo;
+            outputDiv.appendChild(label);
+            // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
+            return;
+        }
+        else if (data.status.toUpperCase() == 'OK')
+        {
+            let userid 
+            userid = data.data;
+
+            if (outputDiv.getElementsByTagName('label').length >0)
+            {
+                br = outputDiv.ownerDocument.createElement('br');
+                outputDiv.appendChild(br);
+            }
+
+            let statutInfo = "L'utilisateur a été créé " + userid;
+            label = outputDiv.ownerDocument.createElement('label');
+            label.innerHTML = inputData + ' ' + statutInfo;
+            outputDiv.appendChild(label);
+        }
+        else
+        {
+            let statutInfo = "Une erreur s'est produite lors de la création de l'utilisateur : " + data.description
+            console.log(statutInfo);
+
+            if (outputDiv.getElementsByTagName('label').length >0)
+            {
+                br = outputDiv.ownerDocument.createElement('br');
+                outputDiv.appendChild(br);
+            }
+            label = outputDiv.ownerDocument.createElement('label');
+            label.innerHTML = inputData + ' ' + statutInfo;
+            outputDiv.appendChild(label);
+            // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
+            return;
+        }
+    }
+
 

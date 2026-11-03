@@ -690,6 +690,7 @@
                 {
                     $resultJson->data[] = json_encode($response); 
                     $resultJson->status = ResponseStatus::STATUT_OK;
+                    error_log(basename(__FILE__) . stripAccents(" L'id du nouvel utilisateur est : " . $resultJson->data[0]));
                 }
                 else
                 {
@@ -746,7 +747,7 @@
                 $opts = [
                     CURLOPT_URL => $url,
                     CURLOPT_CUSTOMREQUEST => "DELETE",
-                    CURLOPT_POSTFIELDS => "",
+                    CURLOPT_POSTFIELDS => "{}",
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_SSL_VERIFYPEER => false,
                     CURLOPT_PROXY => ETAB_PROXY_URL,
@@ -758,6 +759,7 @@
 
                 $header = array();
                 $header[] = "accept: */*";
+                $header[] = "Content-Type: application/json";
                 $header[] = "authorization: Bearer " . $token;
                 $header[] = "Cache-Control: no-cache, no-store, must-revalidate";
                 $header[] = "Pragma: no-cache";
@@ -1148,12 +1150,12 @@
                 $curl = curl_init();
                 $url = CIAM_GROUP_URL . '/' . $groupId;
                 // $json = $ciamGroup->jsonString();
-                $json = $ciamGroup->modifyJsonString();
+                $json = $ciamGroup->modifyJsonString(true);
 
                 // echo "<pre>"; print_r(__FUNCTION__ . " " . __LINE__ . " $url"); echo "</pre>";
                 error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] $url"));
                 // echo "<pre>"; print_r(__FUNCTION__ . " " . __LINE__ . " " . $ciamGroup->modifyJsonString(true)); echo "</pre>";
-                // error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] " . $ciamGroup->modifyJsonString(true)));
+                // error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] ") . $json);
 
                 $opts = [
                             CURLOPT_URL => $url,
@@ -1169,6 +1171,7 @@
 
                 $header = array();
                 $header[] = "accept: application/json";
+                $header[] = "Content-Type: application/json";
                 $header[] = "authorization: Bearer " . $token;
                 $header[] = "Cache-Control: no-cache, no-store, must-revalidate";
                 $header[] = "Pragma: no-cache";
@@ -1280,6 +1283,7 @@
                 curl_setopt($curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
                 $header = array();
+                $header[] = "Content-Type: application/json";
                 $header[] = "accept: application/json";
                 $header[] = "authorization: Bearer " . $token;
                 $header[] = "Cache-Control: no-cache, no-store, must-revalidate";
@@ -1374,6 +1378,7 @@
                 curl_setopt($curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
                 $header = array();
+                $header[] = "Content-Type: application/json";
                 $header[] = "accept: application/json";
                 $header[] = "authorization: Bearer " . $token;
                 $header[] = "Cache-Control: no-cache, no-store, must-revalidate";
@@ -1413,7 +1418,329 @@
             return $resultJson;
         }
 
+        public function checkAndCreateIdentity(string $lineInfos, SifacSqlMode $sqlmode) :ResponseClass
+        {
+            $response = new ResponseClass();
+            $sifacFunctions = new SifacFunctions();
+            $ciamfunctions = new CiamFunctions();
+
+            $fullSifacRoleArray = ['NOM' => [], 'DESCRIPTION' => []];
+            // Si les rôles SIFAC sont gérés dans le CIAM, il faut mettre en cache les rôles SIFAC
+            if (SIFACROLES_INTO_CIAM)
+            {
+                // On récupère tous les rôles SIFAC
+                $sifacFunctions = new SifacFunctions();
+                $resultJson = $sifacFunctions->getSifacRolesList($sqlmode);
+                if ($resultJson->status == ResponseStatus::STATUT_OK)
+                {
+                    $fullSifacRoleArray = $resultJson->data;
+                    if (trim($resultJson->description . '') != '')
+                    {
+                        $resultJson->status = ResponseStatus::STATUT_KO;
+                        return $resultJson;
+                        // showMessage(MSGWARNING,$resultJson->description);
+                    }
+                }
+                else
+                {
+                    return $resultJson;
+                    // showMessage(MSGERROR,"Erreur lors de la récupération des rôles SIFAC : " . $resultJson->description);  
+                }
+            }
+
+            // On passe en majuscule toutes les clés du tableau des noms => Tous les noms des rôles sont en majuscules
+            $fullSifacRoleArray['NOM'] = array_change_key_case($fullSifacRoleArray['NOM'], CASE_UPPER);
+
+            $responseCiamGroupList = $ciamfunctions->getListCiamGroupInfos();
+            $fullCiamGroupList = [];
+            if ($responseCiamGroupList->status == ResponseStatus::STATUT_KO)
+            {
+                // Impossible de récupérer les groupes
+            }
+            else
+            {
+                foreach($responseCiamGroupList->data as $groupData)
+                {
+                    $ciamGroup = new CiamGroupClass();
+                    $ciamGroup->load($groupData);
+                    $fullCiamGroupList[$ciamGroup->displayname] = $ciamGroup;
+                }
+            }
+
+            $uppercaseCiamRoles = [];
+            if (defined('CIAMROLES'))
+            {
+                // On passe tous les noms des rôles CIAM en majuscule
+                $uppercaseCiamRoles = array_map('strtoupper',CIAMROLES);
+            }
+
+            $excludeDomains = [];
+            if (defined('EXCLUDE_USERDOMAIN'))
+            {
+                $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
+            }
+
+            $infos = explode(';',$lineInfos);
+            $agent=trim($infos[0]);
+            if ($agent=='')
+            {
+                $response = new ResponseClass();
+                $response->status = ResponseStatus::STATUT_KO;
+                $response->description = "L'identifiant de l'agent est vide";
+                return $response;
+            }
+
+            // On supprime le critère de recherche de l'agent
+            // Il ne reste donc plus que les CIAMRole et CIAMGroup (s'ils sont saisis)
+            unset($infos[0]);
+
+            $sifacCiamRoleList = [];
+            $ciamGroupList = [];
+            $sifacRoleNameList = [];
+            $itemNotFoundText = "";
+            // Pour tous les autres infos (soit CIAMRole, soit CIAMGroup) on va alimenter les tableaux correspondants
+            foreach($infos as $ciamElement)
+            {
+                $itemFound = false;
+                $ciamElement = trim($ciamElement);
+                // Si le ciamElement n'est pas vide
+                if ($ciamElement != '')
+                {
+                    // On passe en majuscule l'élément recherché
+                    $ciamElement = strtoupper($ciamElement);
+
+                    // On va chercher dans les noms des rôles CIAM (=> Donc dans le tableau CIAMROLES s'il est déclaré)
+                    if (in_array($ciamElement,$uppercaseCiamRoles) and ENABLE_ROLE_CIAM)
+                    {
+                        $ciamElementId = array_search($ciamElement,$uppercaseCiamRoles);
+                        $sifacCiamRoleList[$ciamElementId] = $ciamElementId;
+                        $itemFound = true;
+                    }
+                    // Si l'élément n'est pas dans le CIAMROLES, on regarde s'il est dans les groupes CIAM
+                    if (!$itemFound)
+                    {
+                        // Pour chaque rôle de la liste des groupes du CIAM (=> liste complète)
+                        foreach($fullCiamGroupList as $ciamGroup)
+                        {
+                            // Si on trouve le nom du groupe CIAM dans la liste complète (attention : Recherche case-insensitive)
+                            if (strcasecmp($ciamGroup->displayname, $ciamElement)==0)
+                            {
+                                // On met l'id CIAM du groupe dans la liste des groupes CIAM de l'utilisateur
+                                $ciamGroupList[$ciamGroup->id] = $ciamGroup->id;
+                                $itemFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!$itemFound)
+                    {
+                        if (isset($fullSifacRoleArray['NOM'][$ciamElement]))
+                        {
+                            $sifacRoleNameList[$ciamElement] = $ciamElement;
+                            $itemFound = true;
+                        }
+                    }
+
+                    // Si on n'a pas trouvé l'élément dans les rôles CIAM ou les groupes CIAM ou les rôles SIFAC
+                    if (!$itemFound)
+                    {
+                        // On construit un message afin de tracer les ciamElements qui n'ont pas de correspondances
+                        if ($itemNotFoundText == '')
+                        {
+                            $itemNotFoundText = "Identité : $agent <br>";
+                        }
+                        $itemNotFoundText .= "L'élément d'autorisation $ciamElement n'a pas pu être identfié.<br>";
+                    }
+                }
+            }
+
+            $displayName = '';
+            $eppn = '';
+            $uid = '';
+            $mail = '';
+            $nom = '';
+            $prenom = '';
+            if ($itemNotFoundText != '')
+            {
+                // Si on a des éléments sans correspondance => On lève une erreur et l'identité n'est pas créee
+                $response = new ResponseClass();
+                $response->status = ResponseStatus::STATUT_KO;
+                $response->description = $itemNotFoundText . "<br>Echec de la création de l'identité.";
+                $response->data = [];
+                return $response;
+            }
+            else
+            {
+                $ldapFunctions = new LdapFunctions();
+                $response = $ldapFunctions->getLDAPInfos(
+                                                $agent,
+                                                [   LDAP_AGENT_MAIL_ATTR,
+                                                    LDAP_AGENT_NOM_ATTR,
+                                                    LDAP_AGENT_PRENOM_ATTR,
+                                                    LDAP_AGENT_EPPN_ATTR,
+                                                    LDAP_AGENT_DISPLAYNAME_ATTR,
+                                                    LDAP_AGENT_UID_ATTR
+                                                ],
+                                                [   LDAP_AGENT_EPPN_ATTR,
+                                                    LDAP_AGENT_NOM_ATTR,
+                                                    LDAP_AGENT_PRENOM_ATTR,
+                                                    LDAP_AGENT_MAIL_ATTR,
+                                                    LDAP_AGENT_DISPLAYNAME_ATTR,
+                                                    LDAP_AGENT_UID_ATTR
+                                                ],
+                                                LdapSearchClass::LDAP_OPTION_ONE_RESPONSE
+                                                        );
+            }
+            if ($response->status == ResponseStatus::STATUT_OK)
+            {
+                if (count($response->data)==1)
+                {
+                    $displayName = htmlspecialchars($response->data[0][LDAP_AGENT_DISPLAYNAME_ATTR]);
+                    $eppn = htmlspecialchars($response->data[0][LDAP_AGENT_EPPN_ATTR]);
+                    $mail = htmlspecialchars($response->data[0][LDAP_AGENT_MAIL_ATTR]);
+                    $nom = htmlspecialchars($response->data[0][LDAP_AGENT_NOM_ATTR]);
+                    $prenom = htmlspecialchars($response->data[0][LDAP_AGENT_PRENOM_ATTR]);
+                    $uid = htmlspecialchars($response->data[0][LDAP_AGENT_UID_ATTR]);
+                }
+                else
+                {
+                    $response->description .= "<br>Critère de recherche : $agent";
+                    $response->status = ResponseStatus::STATUT_KO;
+                    return $response;
+                }
+            }
+
+            $ciamUser = new CiamUserClass();
+            
+            if (trim($eppn . '') != '')
+            {
+                $ciamActive = true;
+
+                // On fixe l'eppn du CIAM à la valeur de l'EPPN passée par le formulaire
+                $ciamData['eppn'] = $eppn;
+                // Gestion du flag 'Active'
+                $ciamData['active'] = $ciamActive;
+                error_log(basename(__FILE__) . " " . stripAccents(" On va créer l'eppn : " . $eppn . "."));  
+
+                // Si on doit associer des groupes CIAM à l'utilisateur CIAM
+                if (!is_null($ciamGroupList))
+                {
+                    // On alimente les groupes
+                    $ciamData['groups'] = $ciamGroupList;
+                }
+                // Si des rôles SIFAC sont associés à l'utilisateur qu'on va créer
+                if (!is_null($sifacRoleNameList))
+                {
+                    foreach($sifacRoleNameList as $index => $sifacRoleName)
+                    {
+                        if (str_starts_with($sifacRoleName,'YC_') or str_starts_with($sifacRoleName,'YP_') or str_starts_with($sifacRoleName,'YS_'))
+                        {
+                            // $sifacRole = new SifacRoleClass();
+                            // $sifacRole->load(['name' => $sifacRoleName, 'description' => $fullSifacRoleArray['NOM'][$sifacRoleName]->description]);
+                            $ciamData['sifacroles'][] = $fullSifacRoleArray['NOM'][$sifacRoleName];
+                        }
+                    }
+                }
+
+
+                // On transforme ces données dans un objet ciamuserclass
+                $ciamUser->load($ciamData,$fullSifacRoleArray);
+
+                // On vérifie si l'EPPN existe déjà dans le CIAM => Vérification case-insensitive
+                $ciamfunctions = new CiamFunctions();
+                $response = $ciamfunctions->getCiamIdentitiesInfos();
+                if ($response->status == ResponseStatus::STATUT_OK)
+                {
+                    $data = $response->data;
+                    foreach ($data as $userInfo)
+                    {
+                        $tempCiamUser = new CiamUserClass();
+                        $tempCiamUser->load($userInfo,$fullSifacRoleArray);
+
+                        $userDomain = strtolower(explode('@',$tempCiamUser->eppn)[1]);
+                        if (in_array($userDomain,$excludeDomains))
+                        {
+                            // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
+                            error_log(basename(__FILE__) . " " . stripAccents(" L'EPPN est dans un domaine exclu " . $tempCiamUser->eppn . "."));  
+                            continue;
+                        }
+
+                        // Si l'eppn de l'utilisateur (=> $ldapeppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
+                        // if (strcasecmp($tempCiamUser->eppn,$ldapeppn) == 0)
+                        if (strcasecmp($tempCiamUser->eppn,$eppn) == 0)
+                        {
+                            $response->status = ResponseStatus::STATUT_KO;
+                            $response->description = "L'eppn existe déjà dans le CIAM. Impossible de le créer => " . $agent . " (" . $tempCiamUser->eppn . ").";
+                            $response->data = [];
+                            return $response;
+                        }
+                    }
+                }
+
+                // L'utilisateur n'existe pas (=> eppn inexistant)
+                if ($response->status == ResponseStatus::STATUT_OK)
+                {
+                    // Si on a défini les CIAMroles => On les sauvegarde dans le CIAM
+                    if (!is_null($sifacCiamRoleList))
+                    {
+                        $ciamUser->ciamroles = $sifacCiamRoleList;
+                    }
+
+                    $ldapAgentObj = new LdapUserClass();
+                    $ldapData = [   'name' => $nom,
+                                    'firstname' => $prenom,
+                                    'uid' => $uid,
+                                    // 'eppn' => $ldapeppn,
+                                    'eppn' => $eppn,
+                                    'displayname' => $displayName,
+                                    'mail' => $mail
+                                ];
+                    $ldapAgentObj->load($ldapData);
+
+                    $response = $ciamfunctions->createCiamUserResource($ldapAgentObj, $ciamUser);
+
+                    if ($response->status == ResponseStatus::STATUT_OK)
+                    {
+                        // On initialise l'id de l'utilisateur CIAM qu'on vient de créer
+                        $ciamUser->id = json_decode(reset($response->data),true)['id'];
+
+                        // On va ajouter l'utilisateur CIAM dans les groupes CIAM
+                        $responseCiamGroupList = $ciamfunctions->getListCiamGroupInfos();
+                        if ($responseCiamGroupList->status == ResponseStatus::STATUT_KO)
+                        {
+                            $response = $responseCiamGroupList;
+                            return $response;
+                        }
+                        else
+                        {
+                            foreach($responseCiamGroupList->data as $groupData)
+                            {
+                                $ciamGroup = new CiamGroupClass();
+                                $ciamGroup->load($groupData);
+                                if (in_array($ciamGroup->id,$ciamUser->ciamgroups))
+                                {
+                                    $ciamGroup->addMember($ciamUser->id);
+                                    // var_dump(__FUNCTION__ . " On va enregistrer la modification du groupe " . $ciamGroup->displayname);
+                                    $responseModifyGroup = $ciamfunctions->modifyCiamGroupInfos($ciamGroup);
+                                    if ($responseModifyGroup->status == ResponseStatus::STATUT_KO)
+                                    {
+                                        error_log(basename(__FILE__) . " " . stripAccents(" Erreur lors de la modification des groupes => " . $responseModifyGroup->description . "."));  
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+            if ($response->status == ResponseStatus::STATUT_OK)
+            {
+                $response->description = "L'agent $agent a été créé avec l'identifiant : " . $ciamUser->id;
+                $response->data[0] = $ciamUser->id;
+                // showMessage(MSGINFO, "L'agent $agent a été créé avec l'identifiant : " . $ciamUser->id);
+            }
+            return $response;
+        }
 
     }
-
 ?>

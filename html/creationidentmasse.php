@@ -1,4 +1,6 @@
 <?php
+    // ini_set('max_execution_time', '800');
+    set_time_limit(800);
 
     require_once ("../vendor/autoload.php");
     require_once ("../config/config.php");
@@ -125,6 +127,12 @@
         {
             // On passe tous les noms des rôles CIAM en majuscule
             $uppercaseCiamRoles = array_map('strtoupper',CIAMROLES);
+        }
+
+        $excludeDomains = [];
+        if (defined('EXCLUDE_USERDOMAIN'))
+        {
+            $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
         }
 
         foreach($searchInfos as $lineInfos)
@@ -265,6 +273,7 @@
                 $ciamData['eppn'] = $eppn;
                 // Gestion du flag 'Active'
                 $ciamData['active'] = $ciamActive;
+                error_log(basename(__FILE__) . " " . stripAccents(" On va créer l'eppn : " . $eppn . "."));  
 
                 // Si on doit associer des groupes CIAM à l'utilisateur CIAM
                 if (!is_null($ciamGroupList))
@@ -300,6 +309,15 @@
                     {
                         $tempCiamUser = new CiamUserClass();
                         $tempCiamUser->load($userInfo,$fullSifacRoleArray);
+
+                        $userDomain = strtolower(explode('@',$tempCiamUser->eppn)[1]);
+                        if (in_array($userDomain,$excludeDomains))
+                        {
+                            // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
+                            error_log(basename(__FILE__) . " " . stripAccents(" L'EPPN est dans un domaine exclu " . $tempCiamUser->eppn . "."));  
+                            continue;
+                        }
+
                         // Si l'eppn de l'utilisateur (=> $ldapeppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
                         // if (strcasecmp($tempCiamUser->eppn,$ldapeppn) == 0)
                         if (strcasecmp($tempCiamUser->eppn,$eppn) == 0)
@@ -374,8 +392,10 @@
         }
     }
 
+
     if (!cas_user_check_access($casUid, CIAMGROUPACCESS_CREATE,true))
     {
+        error_log(basename(__FILE__) . " " . stripAccents(" L'utilisateur CAS $casUid n'est plus autorisé."));  
         echo '<script type="text/javascript">';
         echo 'window.location.href="index.php";';
         echo '</script>';
@@ -387,6 +407,10 @@
     }
 
 ?>
+
+<div id='responsezone' name='responsezone'></div>
+<br>
+
 <form method='post'>
     Indiquez les identifiants des utilisateurs à créer.<br>
     Un identifiant par ligne (adresse mail, eppn, uid).<br>
@@ -399,10 +423,46 @@
     ident1;SIFAC_PREPROD_USER;SIFAC_INTEGRATION_ACCESS;SIFAC_PAIE_ACCESS;SIFAC_STAGIAIRES_USER;SIFAC_PAIE_USER<br>
     ident2;SIFAC_FORMATEUR_2_USER;SIFAC_FORMATION_USER;SCIM_PRINCIPAL<br>
     <br>
-    <textarea name="agentlist" id="agentlist" cols="200" rows="30" style="resize: none;" wrap='off'><?php echo htmlspecialchars($agentlist);?></textarea>
+    <textarea name='agentlist' id='agentlist' cols='200' rows='30' style='resize: none;' wrap='off'><?php echo htmlspecialchars($agentlist);?></textarea>
     <br>
     <br>
-    <button class="sifacbouton sifacvalidebouton" name="createidbutton" id="createidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création en masse de ces utilisateurs ?"'; ?> >Créer</button>
+<!--
+    <button class='sifacbouton sifacvalidebouton' name='createidbutton' id='createidbutton' type='button' onclick='askConfirmBeforeSave(this,"reloadPage");' <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création en masse de ces utilisateurs ?"'; ?> >Créer</button>
+-->
+    <button class='sifacbouton sifacvalidebouton' name='createidbutton' id='createidbutton' type='button' onclick='askConfirmBeforeSave(this,"massIdentityCreation");' <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création en masse de ces utilisateurs ?"'; ?> >Créer</button>
 </form>
+
+<script>
+    function massIdentityCreation()
+    {
+        let inputHTMLTextArea = document.getElementById('agentlist');
+        if (inputHTMLTextArea)
+        {
+<?php
+            // Si la constante n'est pas définie, on l'initialise à chaine vide.
+            if (!defined('WS_SERVER_URL'))
+            {
+                define('WS_SERVER_URL', '');
+            }
+?>
+            let fullWSURL = "<?php echo WS_SERVER_URL ?>/internalFunctionsWS.php";
+            let sqlMode = "<?php echo SQLMODE->value ?>";
+
+            let outputDiv = document.getElementById("responsezone");
+            outputDiv.textContent = '';
+
+            let inputDataArray = inputHTMLTextArea.value.split(/\r?\n/);
+
+            inputDataArray.forEach(inputData => {
+                if (inputData.trim() != '')
+                {
+                    createIdentity(fullWSURL, sqlMode, inputData, outputDiv);
+                }
+            });
+        }
+    }
+
+</script>
+
 </body>
 </html>

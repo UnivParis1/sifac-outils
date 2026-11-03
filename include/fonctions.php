@@ -180,6 +180,11 @@
     {
         static $userCiamGroups = [];
 
+        if (trim($uid) == '')
+        {
+            return false;
+        }
+
         if (isset($userCiamGroups[$uid]) and !$force)
         {
             $ciamGroupList = $userCiamGroups[$uid];
@@ -237,8 +242,8 @@
             if (in_array(strtoupper($ciamgroupdata['display']),$ciamrolefilter))
             {
                 // On a trouvé un groupe qui correspond => On sort et on retourne true;
-                // $errlog = "Le groupe " . $ciamgroupdata['display'] . " est dans la liste des groupes de l'utilisateur " . $uid;
-                // error_log(basename(__FILE__) . " " . stripAccents($errlog));
+                $errlog = "Le groupe " . $ciamgroupdata['display'] . " est dans la liste des groupes de l'utilisateur " . $uid;
+                error_log(basename(__FILE__) . " " . stripAccents($errlog));
                 return true;
             }
         }
@@ -426,7 +431,7 @@
     /**
      * Retourne le nom du jour en français correspondant à un index
      *
-     * @param string $index index du jour de la semaine (0=Dimanche, 6=Samedi, 7=Dimanche)
+     * @param int $index index du jour de la semaine (0=Dimanche, 6=Samedi, 7=Dimanche)
      * @param int $length Longueur du nom du jour à retourner (=> tronque le nom du jour au lenght caractère). Si null, pas de troncature.
      * @return string Le nom du jour (en français) correspondant à l'index
      */

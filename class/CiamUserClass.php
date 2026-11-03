@@ -292,7 +292,7 @@
             if (!isset($this->firstname)) $this->firstname = 'Prénom indéfini';
             if (!isset($this->mail)) $this->mail = 'mail@undefined.fr';
             if (!isset($this->displayname)) $this->displayname = 'DisplayName indéfini';
-            if (!isset($this->eppn)) $this->eppn = 'eppn@undefined.fr';
+            if (!isset($this->eppn)) $this->eppn = '@';
 
             return true;
         }
