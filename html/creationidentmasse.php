@@ -407,10 +407,6 @@
     }
 
 ?>
-
-<div id='responsezone' name='responsezone'></div>
-<br>
-
 <form method='post'>
     Indiquez les identifiants des utilisateurs à créer.<br>
     Un identifiant par ligne (adresse mail, eppn, uid).<br>
@@ -423,14 +419,18 @@
     ident1;SIFAC_PREPROD_USER;SIFAC_INTEGRATION_ACCESS;SIFAC_PAIE_ACCESS;SIFAC_STAGIAIRES_USER;SIFAC_PAIE_USER<br>
     ident2;SIFAC_FORMATEUR_2_USER;SIFAC_FORMATION_USER;SCIM_PRINCIPAL<br>
     <br>
-    <textarea name='agentlist' id='agentlist' cols='200' rows='30' style='resize: none;' wrap='off'><?php echo htmlspecialchars($agentlist);?></textarea>
-    <br>
-    <br>
 <!--
     <button class='sifacbouton sifacvalidebouton' name='createidbutton' id='createidbutton' type='button' onclick='askConfirmBeforeSave(this,"reloadPage");' <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création en masse de ces utilisateurs ?"'; ?> >Créer</button>
 -->
     <button class='sifacbouton sifacvalidebouton' name='createidbutton' id='createidbutton' type='button' onclick='askConfirmBeforeSave(this,"massIdentityCreation");' <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création en masse de ces utilisateurs ?"'; ?> >Créer</button>
+    <br>
+    <textarea name='agentlist' id='agentlist' cols='200' rows='30' style='resize: none;' wrap='off'><?php echo htmlspecialchars($agentlist);?></textarea>
+    <br>
 </form>
+<br>
+<div id='responsezone' name='responsezone'></div>
+<br>
+
 
 <script>
     function massIdentityCreation()
@@ -448,6 +448,7 @@
             let fullWSURL = "<?php echo WS_SERVER_URL ?>/internalFunctionsWS.php";
             let sqlMode = "<?php echo SQLMODE->value ?>";
 
+            // On vide la zone de réponse des WS
             let outputDiv = document.getElementById("responsezone");
             outputDiv.textContent = '';
 

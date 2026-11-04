@@ -704,7 +704,8 @@
         let versionInfos = 'Bibliothèque sifac-outils<br>';
         versionInfos = versionInfos + "Version : <?php echo SIFAC_OUTILS_VERSION; ?><br>";
         versionInfos = versionInfos + "Auteur : Pascal Comte<br>";
-        versionInfos = versionInfos + "Université Paris 1 Panthéon - Sorbonne";
+        versionInfos = versionInfos + "Université Paris 1 Panthéon - Sorbonne<br>";
+        versionInfos = versionInfos + '<a href="https://github.com/UnivParis1/sifac-outils" target="_blank" rel="noopener">Dépôt Git</a>';
         showModalSingleButton('info',menuItem.innerHTML,'Ok',versionInfos);
     }
 

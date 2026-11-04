@@ -648,60 +648,88 @@
         return false;
     }
 
-
     /**
      * Crée une identité (utilisateur) via un Web Service et affiche le résultat
-     * de l'opération dans un conteneur HTML.
+     * de l'opération dans un tableau HTML contenu dans `outputDiv`.
      *
-     * Le Web Service `createciamident` est appelé en POST et doit retourner un
-     * objet JSON contenant les propriétés `status`, `description` et `data`. En
-     * cas de succès (`status` = 'OK'), `data` contient l'identifiant de
-     * l'utilisateur créé.
+     * Le Web Service `createciamident` est appelé en POST (JSON) avec le corps
+     * `{ methode, sqlmode, inputdata }`. Il doit retourner un objet JSON contenant
+     * les 3 propriétés obligatoires `status`, `description` et `data`. En cas de
+     * succès (`status` = 'OK', insensible à la casse), `data` contient
+     * l'identifiant de l'utilisateur créé (non affiché actuellement).
      *
-     * Chaque résultat (succès ou erreur) est ajouté dans `outputDiv` sous la
-     * forme d'un <label> préfixé par `inputData`, de façon à pouvoir enchaîner
-     * plusieurs créations successives (un <br> est inséré avant chaque nouveau
-     * <label> si `outputDiv` en contient déjà un).
+     * Chaque appel (avec une URL valide) ajoute une ligne au tableau
+     * (`table.tableausimple`, créé au premier appel puis réutilisé) :
+     *   - cellule 1 : `inputData` ;
+     *   - cellule 2 : le statut, d'abord « En attente de traitement » (classe
+     *     `waitingclass`), puis le message de succès (classe `celinfo`) ou
+     *     d'erreur (classe `celerror`).
+     * Cela permet d'enchaîner plusieurs créations successives (création en masse).
      *
      * @async
      *
      * @param {string} fullWSURL
-     *        URL complète du Web Service à appeler.
+     *        URL complète (http/https) du Web Service à appeler. Les doubles "/"
+     *        non nécessaires (hors "://") sont supprimés avant l'appel.
      *
      * @param {string} sqlMode
-     *        Mode SQL à transmettre au Web Service (ex. "DIRECT", "ECC", etc.).
+     *        Mode SQL transmis au Web Service (propriété `sqlmode`),
+     *        ex. "DIRECT", "ECC", etc.
      *
      * @param {string} inputData
      *        Donnée d'entrée décrivant l'identité à créer, transmise au Web
-     *        Service (propriété `inputdata`) et reprise en préfixe des messages
-     *        affichés.
+     *        Service (propriété `inputdata`) et affichée dans la 1re cellule de
+     *        la ligne (ou en préfixe du message si l'URL est invalide).
      *
      * @param {HTMLElement} outputDiv
-     *        Conteneur HTML dans lequel les messages de résultat sont ajoutés.
+     *        Conteneur HTML recevant le tableau de résultats. Obligatoire : il est
+     *        utilisé dans tous les cas, y compris lorsque l'URL est invalide.
      *
      * @returns {Promise<void>}
      *          Ne retourne rien ; le résultat est affiché dans `outputDiv`.
      *
      * @description
-     * - Appelle le Web Service `createciamident`.
-     * - Vérifie le statut HTTP et le statut applicatif (`data.status`).
-     * - Journalise les erreurs dans la console et les affiche dans `outputDiv`
-     *   (et non dans une boîte de dialogue : les appels à
-     *   showModalSingleButton sont commentés).
+     * - Si `fullWSURL` est vide ou invalide (`isValidHttpUrl`) : ajoute dans
+     *   `outputDiv` un `<label>` d'erreur (précédé d'un `<br>` s'il en existe déjà
+     *   un), sans créer de tableau ni ajouter de ligne, puis s'arrête.
+     * - Sinon, crée le tableau de résultats dans `outputDiv` s'il n'existe pas
+     *   encore, puis y ajoute une ligne « en attente », appelle le Web Service
+     *   `createciamident` et vérifie le statut HTTP, le format de la réponse
+     *   (présence de `status`, `description`, `data`) puis le statut applicatif
+     *   (`data.status`).
+     * - Affiche le résultat dans la 2e cellule de la ligne. Les exceptions (appel
+     *   WS, décodage JSON) et les erreurs applicatives sont journalisées dans la
+     *   console ; les erreurs HTTP et de format sont uniquement affichées.
+     * - Lorsqu'il ne reste plus aucune ligne en attente (`waitingclass`) dans le
+     *   tableau, affiche une boîte de dialogue d'information « Fin de l'opération »
+     *   via `showModalSingleButton`. Les autres appels à cette fonction (résultat
+     *   de chaque création) sont commentés.
      *
      * @note
      * Les exceptions générées lors de l'appel au Web Service ou du décodage JSON
-     * sont interceptées, journalisées et affichées dans `outputDiv`. Elles ne
-     * sont pas propagées à l'appelant.
+     * sont interceptées et affichées dans la ligne concernée. Elles ne sont pas
+     * propagées à l'appelant.
      *
      * @note
-     * `outputDiv` est obligatoire : il est utilisé dans tous les cas, y compris
-     * lorsque l'adresse du WS est invalide.
+     * Si l'URL est invalide, les erreurs sont affichées sous forme de `<label>`
+     * (et non dans le tableau) : si `outputDiv` contient à la fois un tableau et
+     * des `<label>`, ceux-ci sont ajoutés après le tableau.
+     *
+     * @see isValidHttpUrl
+     * @see showModalSingleButton
      */
     async function createIdentity(fullWSURL, sqlMode, inputData, outputDiv)
     {
+        const WAITINGCLASS = 'waitingclass'
+
         let label;
         let br;
+        let methode = 'createciamident';
+        let reponse;
+        let data;
+        let table;
+        let tableCell;
+        let statutInfo = '';
 
         if (!fullWSURL || fullWSURL.trim() == '' || !isValidHttpUrl(fullWSURL))
         {
@@ -712,8 +740,10 @@
             }
 
             label = outputDiv.ownerDocument.createElement('label');
+            label.classList.add('celerror');
             label.innerHTML = inputData + ' ' + "L'adresse du WS n'est pas ou est mal définie.";
             outputDiv.appendChild(label);
+
             // showModalSingleButton('error','Appel d\'un WS','Ok',"L'adresse du WS n'est pas ou est mal définie.");
             return;
         }
@@ -721,9 +751,23 @@
         // Nettoyage de l'URL en supprimant les doubles "anti-slash" non nécessaires
         fullWSURL = fullWSURL.replace(/([^:]\/)\/+/g, "$1");
 
-        let methode = 'createciamident';
-        let reponse;
-        let data;
+        table = outputDiv.ownerDocument.getElementById('resulttable');
+        if (!table)
+        {
+            table = outputDiv.ownerDocument.createElement('table');
+            table.classList.add('tableausimple');
+            table.id = 'resulttable';
+            table.name = table.id;
+            outputDiv.appendChild(table);
+        }
+
+        let tableLigne = table.insertRow();
+        tableCell = tableLigne.insertCell(0);
+        tableCell.classList.add('cellulesimple');
+        tableCell.innerHTML = inputData;
+        tableCell = tableLigne.insertCell(1);
+        tableCell.classList.add('cellulesimple', WAITINGCLASS);
+        tableCell.innerHTML = 'En attente de traitement';
 
         try {
             /////////////////////// Mode POST ///////////////////////
@@ -740,81 +784,65 @@
             // reponse = await fetch(fullWSURL + "?methode=" + methode + "&sqlmode=" + encodeURIComponent(sqlMode));
             ////////////////////////////////////////////////////////
 
-            data = await reponse.json();
-            // On vérifie que la réponse a un format correct : 
-            // Existance des proprités status, description et data qui sont toutes les 3 obligatoires
-            if (!data || !data.hasOwnProperty('status') || !data.hasOwnProperty('description') || !data.hasOwnProperty('data'))
+            if (reponse.ok === true)
             {
-                throw new Error("Format de la réponse incorrect.");
+                data = await reponse.json();
+                // On vérifie que la réponse a un format correct : 
+                // Existance des proprités status, description et data qui sont toutes les 3 obligatoires
+                if (!data || !data.hasOwnProperty('status') || !data.hasOwnProperty('description') || !data.hasOwnProperty('data'))
+                {
+                    // throw new Error("Format de la réponse incorrect.");
+                    statutInfo = "Erreur WS - méthode : " + methode + " : Format de la réponse incorrect.";
+                }
+            }
+            else
+            {
+                data = new Object();
+                data.status = 'KO';
+                data.description = 'Erreur HTTP ' + reponse.status + ' : ' + reponse.statusText;
+                data.data = [];
+                statutInfo = "Erreur WS - méthode : " + methode + " : " + data.description;
             }
         } 
         catch (exception) 
         {
             console.log("Une exception s'est produite lors de l'appel au WS : " + exception);
-
-            if (outputDiv.getElementsByTagName('label').length >0)
-            {
-                br = outputDiv.ownerDocument.createElement('br');
-                outputDiv.appendChild(br);
-            }
-
-            let statutInfo = "Erreur WS - méthode : " + methode + " : " + exception;
-            label = outputDiv.ownerDocument.createElement('label');
-            label.innerHTML = inputData + ' ' + statutInfo;
-            outputDiv.appendChild(label);
-            // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
-            return;
+            statutInfo = "Erreur WS - méthode : " + methode + " : " + exception;
         }
 
-        // L'appel du WS s'est bien passé => On a eu une réponse (ok ou pas mais on a une réponse)
-        if (reponse.ok !== true)
+        if (statutInfo.length != 0)
         {
-            console.log("La réponse lors de l'appel au WS n'est pas ok - fonction : createIdentity : " + reponse.statusText);
-
-            if (outputDiv.getElementsByTagName('label').length >0)
-            {
-                br = outputDiv.ownerDocument.createElement('br');
-                outputDiv.appendChild(br);
-            }
-
-            let statutInfo = "Erreur WS - méthode : " + methode + " : " + reponse.statusText;
-            label = outputDiv.ownerDocument.createElement('label');
-            label.innerHTML = inputData + ' ' + statutInfo;
-            outputDiv.appendChild(label);
+            tableCell.classList.remove(WAITINGCLASS);
+            tableCell.classList.add('celerror');
+            tableCell.innerHTML = statutInfo.replace(/(<br\s*\/?>)+/gi, '<br>');
             // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
-            return;
         }
         else if (data.status.toUpperCase() == 'OK')
         {
             let userid 
             userid = data.data;
+            // let statutInfo = "L'utilisateur a été créé " + userid;
+            statutInfo = "L'utilisateur a été créé.";
 
-            if (outputDiv.getElementsByTagName('label').length >0)
-            {
-                br = outputDiv.ownerDocument.createElement('br');
-                outputDiv.appendChild(br);
-            }
-
-            let statutInfo = "L'utilisateur a été créé " + userid;
-            label = outputDiv.ownerDocument.createElement('label');
-            label.innerHTML = inputData + ' ' + statutInfo;
-            outputDiv.appendChild(label);
+            tableCell.classList.remove(WAITINGCLASS);
+            tableCell.classList.add('celinfo');
+            tableCell.innerHTML = statutInfo.replace(/(<br\s*\/?>)+/gi, '<br>');
+            // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
         }
         else
         {
-            let statutInfo = "Une erreur s'est produite lors de la création de l'utilisateur : " + data.description
+            statutInfo = "Une erreur s'est produite lors de la création de l'utilisateur : " + data.description
             console.log(statutInfo);
 
-            if (outputDiv.getElementsByTagName('label').length >0)
-            {
-                br = outputDiv.ownerDocument.createElement('br');
-                outputDiv.appendChild(br);
-            }
-            label = outputDiv.ownerDocument.createElement('label');
-            label.innerHTML = inputData + ' ' + statutInfo;
-            outputDiv.appendChild(label);
+            tableCell.classList.remove(WAITINGCLASS);
+            tableCell.classList.add('celerror');
+            tableCell.innerHTML = statutInfo.replace(/(<br\s*\/?>)+/gi, '<br>');
             // showModalSingleButton('error','Création d\'un utilisateur','Ok',statutInfo);
-            return;
+        }
+
+        if (table.getElementsByClassName(WAITINGCLASS).length == 0)
+        {
+            showModalSingleButton('info','Création en masse d\'utilisateurs','Ok','Fin de l\'opération');
         }
     }
 
