@@ -641,12 +641,12 @@
             {
                 $curl = curl_init();
                 $url = CIAM_USER_URL;
-                $json = $ciamUser->jsonString($ldapAgent);
+                $json = htmlspecialchars_decode($ciamUser->jsonString($ldapAgent,true));
 
                 // echo "<pre>"; print_r(__FUNCTION__ . " " . __LINE__ . " $url"); echo "</pre>";
                 error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] $url"));
                 // echo "<pre>"; print_r(__FUNCTION__ . " " . __LINE__ . " " . $ciamUser->jsonString($ldapAgent,true)); echo "</pre>";
-                // error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] " . $ciamUser->jsonString($ldapAgent,true)));
+                // error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " " . __LINE__ . " [DEBUG] " . $json));
 
                 $opts = [
                     CURLOPT_URL => $url,

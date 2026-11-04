@@ -250,12 +250,12 @@
                 if (count($response->data)==1)
                 {
                     $searchField = $agent;
-                    $displayName = htmlspecialchars($response->data[0][LDAP_AGENT_DISPLAYNAME_ATTR]);
-                    $eppn = htmlspecialchars($response->data[0][LDAP_AGENT_EPPN_ATTR]);
-                    $mail = htmlspecialchars($response->data[0][LDAP_AGENT_MAIL_ATTR]);
-                    $nom = htmlspecialchars($response->data[0][LDAP_AGENT_NOM_ATTR]);
-                    $prenom = htmlspecialchars($response->data[0][LDAP_AGENT_PRENOM_ATTR]);
-                    $uid = htmlspecialchars($response->data[0][LDAP_AGENT_UID_ATTR]);
+                    $displayName = htmlspecialchars_decode($response->data[0][LDAP_AGENT_DISPLAYNAME_ATTR]);
+                    $eppn = htmlspecialchars_decode($response->data[0][LDAP_AGENT_EPPN_ATTR]);
+                    $mail = htmlspecialchars_decode($response->data[0][LDAP_AGENT_MAIL_ATTR]);
+                    $nom = htmlspecialchars_decode($response->data[0][LDAP_AGENT_NOM_ATTR]);
+                    $prenom = htmlspecialchars_decode($response->data[0][LDAP_AGENT_PRENOM_ATTR]);
+                    $uid = htmlspecialchars_decode($response->data[0][LDAP_AGENT_UID_ATTR]);
                 }
                 else
                 {
