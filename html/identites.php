@@ -97,16 +97,23 @@
     }
 
     $searchField = '';
-    $displayName = '';
-    $eppn = '';
-    $uid = '';
-    $mail = '';
-    $nom = '';
-    $prenom = '';
+    $listeLdapAgent = [];
+    $ldapSearchAgentObj = new LdapUserClass();
+
     if (count($_POST) > 0)
     {
-        $agent = filter_input(INPUT_POST, 'agent', FILTER_UNSAFE_RAW);
+
         $ciamAction = filter_input(INPUT_POST, 'ciamaction', FILTER_UNSAFE_RAW);
+        // Si on ne demande pas à charger un agent, on doit prendre le searfield input (s'il existe)
+        if ($ciamAction!=LOAD_USER_RESOURCE)
+        {
+            $searchField = filter_input(INPUT_POST, 'searchfield', FILTER_UNSAFE_RAW);
+        }
+        // Si le searchfield n'existe pas ou est vide, on récupère le champ agent
+        if (is_null($searchField) or ($searchField===false) or (trim($searchField) == ''))
+        {
+            $searchField = filter_input(INPUT_POST, 'agent', FILTER_UNSAFE_RAW);
+        }
         $ldapName = filter_input(INPUT_POST, 'ldapname', FILTER_UNSAFE_RAW);
         $ldapFirstname = filter_input(INPUT_POST, 'ldapfirstname', FILTER_UNSAFE_RAW);
         $ldapUid = filter_input(INPUT_POST, 'ldapuid', FILTER_UNSAFE_RAW);
@@ -500,7 +507,7 @@
                         $ciamUser->load($response->data[0],$fullSifacRoleArray);
                         // On fixe le 'agent' avec l'eppn => On va donc charger l'agent à partir de son EPPN
                         // On aurait pu aussi utiliser le mail mais moins fiable
-                        $agent = $ciamUser->eppn;
+                        $searchField = $ciamUser->eppn;
                     }
                     // Nothing to do => All ok
                     $response->status = ResponseStatus::STATUT_OK;
@@ -515,7 +522,7 @@
                 $ldapFunctions = new LdapFunctions();
 
                 $response = $ldapFunctions->getLDAPInfos(
-                                                $agent,
+                                                $searchField,
                                                 [   LDAP_AGENT_MAIL_ATTR,
                                                     LDAP_AGENT_NOM_ATTR,
                                                     LDAP_AGENT_PRENOM_ATTR,
@@ -530,23 +537,29 @@
                                                     LDAP_AGENT_DISPLAYNAME_ATTR,
                                                     LDAP_AGENT_UID_ATTR
                                                 ],
-                                                LdapSearchClass::LDAP_OPTION_ONE_RESPONSE
+                                                // LdapSearchClass::LDAP_OPTION_ONE_RESPONSE
+                                                LdapSearchClass::LDAP_OPTION_ALL_RESPONSES
                                                         );
                 if ($response->status == ResponseStatus::STATUT_OK)
                 {
                     if (count($response->data)==1)
                     {
-                        $searchField = $agent;
-                        $displayName = htmlspecialchars($response->data[0][LDAP_AGENT_DISPLAYNAME_ATTR]);
-                        $eppn = htmlspecialchars($response->data[0][LDAP_AGENT_EPPN_ATTR]);
-                        $mail = htmlspecialchars($response->data[0][LDAP_AGENT_MAIL_ATTR]);
-                        $nom = htmlspecialchars($response->data[0][LDAP_AGENT_NOM_ATTR]);
-                        $prenom = htmlspecialchars($response->data[0][LDAP_AGENT_PRENOM_ATTR]);
-                        $uid = htmlspecialchars($response->data[0][LDAP_AGENT_UID_ATTR]);
+                        $ldapSearchAgentObj = new LdapUserClass();
+                        $ldapSearchAgentObj->load($response->data[0]);
+                    }
+                    else if (count($response->data)>1)
+                    {
+                        showMessage(MSGWARNING, "Il y a plusieurs agents correspondant à votre sélection.<br>Veuillez choisir l’agent souhaité.");
+                        foreach($response->data as $ldapData)
+                        {
+                            $ldapTempAgentObj = new LdapUserClass();
+                            $ldapTempAgentObj->load($ldapData);
+                            $listeLdapAgent[$ldapTempAgentObj->eppn] = $ldapTempAgentObj;
+                        }
                     }
                     else
                     {
-                        showMessage(MSGERROR, $response->description . "<br>Critère de recherche : $agent");
+                        showMessage(MSGERROR, $response->description . "<br>Critère de recherche : $searchField");
                     }
                 }
             }
@@ -578,6 +591,7 @@
 ?>
     <form method='post'>
         Personne à rechercher : <br>
+        <input type='hidden' id='searchfield' name='searchfield' value="<?php echo htmlspecialchars($searchField); ?>"/>
         <input id='agent' name='agent' placeholder='Nom et/ou prenom' value='<?php echo htmlspecialchars($searchField); ?>' size=40 />
 
 <?php
@@ -603,6 +617,67 @@
             <br>
             <br>
 <?php
+            if (count($listeLdapAgent)>0)
+            {
+?>
+                <table class="tableausimple" id='tableldapselect' name='tableldapselect'>
+                    <thead>
+                        <tr class="entete" >
+                            <th class='titresimple cursorpointer'>Nom <span class='sortindicator'> </span></th>
+                            <th class='titresimple cursorpointer'>Prénom <span class='sortindicator'> </span></th>
+                            <th class='titresimple cursorpointer'>EPPN <span class='sortindicator'> </span></th>
+                            <th class='titresimple cursorpointer'>Mail <span class='sortindicator'> </span></th>
+                            <th class='titresimple '>Sélection</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+<?php
+                foreach($listeLdapAgent as $ldapAgentObj)
+                {
+?>
+                        <tr class=''>
+                            <td class="cellulesimple <?php echo LDAPNAMECELLULE; ?>"><?php echo $ldapAgentObj->name; ?></td>
+                            <td class="cellulesimple <?php echo LDAPFIRSTNAMECELLULE; ?>"><?php echo $ldapAgentObj->firstname; ?></td>
+                            <td class="cellulesimple <?php echo LDAPEPPNCELLULE; ?>"><?php echo $ldapAgentObj->eppn; ?></td>
+                            <td class="cellulesimple <?php echo LDAPMAILCELLULE; ?>"><?php echo $ldapAgentObj->mail; ?></td>
+                            <td class="cellulesimple"><button type='button' class='sifacbouton sifacdocumentbouton'  <?php echo ATTR_ACTION . '="' . LOAD_USER_RESOURCE . '"'; ?> onclick="document.getElementById('agent').value=getCellValue(this.closest('tr'), '<?php echo LDAPEPPNCELLULE; ?>'); reloadPage(this);">Sélection</button></td>
+                        </tr>
+<?php
+                }
+?>
+                    </tbody>
+                </table>
+                <script>
+                    let table = document.querySelector('#tableldapselect');
+                    if (table)
+                    {
+                        let thList = table.querySelectorAll('th');
+                        let numColonneTri = 0;
+                        let sort = false;
+                        thList.forEach(th => { 
+                                    if (th.querySelector('.sortindicator')!==null) 
+                                    {
+                                        // Si le contenu HTML du sortindicator n'est pas vide => On a trié sur cette colonne
+                                        if (th.querySelector('.sortindicator').innerHTML.trim()!="")
+                                        {
+                                            numColonneTri = th.cellIndex;
+                                            sort = !th.asc;
+                                        }
+                                    }
+                                });
+
+                        // // On initialise les evènements pour le tri
+                        sortTableInit(table.id,numColonneTri);
+                        // On trie le tableau sur la colonne précédemment triée et dans le même ordre si cela était défini
+                        table.querySelectorAll('th')[numColonneTri].asc = sort;
+                        table.querySelectorAll('th')[numColonneTri].click();
+                    }
+                </script>
+                <br>
+                <br>
+<?php
+            }
         }
     }
 ?>
@@ -616,16 +691,16 @@
                 <tbody>
                     <tr class=''>
                         <!-- Important : tabindex="-1" => Pas de sélection par tabulation -->
-                        <td class="cellulesimple">Nom :</td><td class="cellulesimple width300 <?php echo LDAPNAMECELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapname' name='ldapname' value='<?php echo $nom; ?>'/></td>
-                        <td class="cellulesimple">Prénom :</td><td class="cellulesimple width300 <?php echo LDAPFIRSTNAMECELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapfirstname' name='ldapfirstname' value='<?php echo $prenom; ?>'/></td>
+                        <td class="cellulesimple">Nom :</td><td class="cellulesimple width300 <?php echo LDAPNAMECELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapname' name='ldapname' value='<?php echo $ldapSearchAgentObj->name; ?>'/></td>
+                        <td class="cellulesimple">Prénom :</td><td class="cellulesimple width300 <?php echo LDAPFIRSTNAMECELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapfirstname' name='ldapfirstname' value='<?php echo $ldapSearchAgentObj->firstname; ?>'/></td>
                     </tr>
                     <tr class=''>
-                        <td class="cellulesimple">Mail :</td><td class="cellulesimple width300 <?php echo LDAPMAILCELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapmail' name='ldapmail' value='<?php echo $mail; ?>'/></td>
-                        <td class="cellulesimple">Display Name :</td><td class="cellulesimple width300 <?php echo LDAPDISPLAYNAMECELLULE; ?>"><input type='text' readonly class='noborder width300' id='ldapdisplayname' name='ldapdisplayname' value='<?php echo $displayName; ?>'/></td>
+                        <td class="cellulesimple">Mail :</td><td class="cellulesimple width300 <?php echo LDAPMAILCELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapmail' name='ldapmail' value='<?php echo $ldapSearchAgentObj->mail; ?>'/></td>
+                        <td class="cellulesimple">Display Name :</td><td class="cellulesimple width300 <?php echo LDAPDISPLAYNAMECELLULE; ?>"><input type='text' readonly class='noborder width300' id='ldapdisplayname' name='ldapdisplayname' value='<?php echo $ldapSearchAgentObj->displayname; ?>'/></td>
                     </tr>
                     <tr class=''>
-                        <td class="cellulesimple">EPPN :</td><td class="cellulesimple width300 <?php echo LDAPEPPNCELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapeppn' name='ldapeppn' value='<?php echo $eppn; ?>'/></td>
-                        <td class="cellulesimple">UID :</td><td class="cellulesimple width300 <?php echo LDAPUIDCELLULE; ?>"> <input type='text' readonly tabindex="-1" class='noborder width300' id='ldapuid' name='ldapuid' value='<?php echo $uid; ?>'/></td>
+                        <td class="cellulesimple">EPPN :</td><td class="cellulesimple width300 <?php echo LDAPEPPNCELLULE; ?>"><input type='text' readonly tabindex="-1" class='noborder width300' id='ldapeppn' name='ldapeppn' value='<?php echo $ldapSearchAgentObj->eppn; ?>'/></td>
+                        <td class="cellulesimple">UID :</td><td class="cellulesimple width300 <?php echo LDAPUIDCELLULE; ?>"> <input type='text' readonly tabindex="-1" class='noborder width300' id='ldapuid' name='ldapuid' value='<?php echo $ldapSearchAgentObj->uid; ?>'/></td>
                     </tr>
                 </tbody>
             </table>
@@ -633,13 +708,14 @@
         <br>
     <br>
 <?php
-    if ($eppn <> '')
+    // if ($eppn <> '')
+    if (trim($ldapSearchAgentObj->eppn) <> '')
     {
-        $ldapuser = new LdapUserClass();
-        $ldapuser->eppn = $eppn;
+        // $ldapuser = new LdapUserClass();
+        // $ldapuser->eppn = $eppn;
 
         $ciamfunctions = new CiamFunctions();
-        $resultJson = $ciamfunctions->getCiamIdentitiesInfosFromEppn($ldapuser->eppn);
+        $resultJson = $ciamfunctions->getCiamIdentitiesInfosFromEppn($ldapSearchAgentObj->eppn);
         $ciamUser = new CiamUserClass();
         if (count($resultJson->data)==1)
         {
@@ -664,13 +740,13 @@
             if (cas_user_check_access($casUid, CIAMGROUPACCESS_MODIFY))
             {
 ?>
-                <button class="sifacbouton sifacmodifierbouton" name="modifyidbutton" id="modifyidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . MODIFY_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la modification de ' . $displayName . ' ?"'; ?> >Modifier</button>
+                <button class="sifacbouton sifacmodifierbouton" name="modifyidbutton" id="modifyidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . MODIFY_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la modification de ' . $ldapSearchAgentObj->displayname . ' ?"'; ?> >Modifier</button>
 <?php
             }
             if (cas_user_check_access($casUid, CIAMGROUPACCESS_ADMIN))
             {
 ?>
-                <button class="sifacbouton sifacsupprbouton" name="deleteidbutton" id="deleteidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . DELETE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la suppression de ' . $displayName . ' ?"'; ?> >Supprimer</button>
+                <button class="sifacbouton sifacsupprbouton" name="deleteidbutton" id="deleteidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . DELETE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la suppression de ' . $ldapSearchAgentObj->displayname . ' ?"'; ?> >Supprimer</button>
 <?php
             }
         }
@@ -679,7 +755,7 @@
             if (cas_user_check_access($casUid, CIAMGROUPACCESS_CREATE))
             {
 ?>
-                <button class="sifacbouton sifacvalidebouton" name="createidbutton" id="createidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création de ' . $displayName . ' ?"'; ?> >Créer</button>
+                <button class="sifacbouton sifacvalidebouton" name="createidbutton" id="createidbutton" type="button" onclick="askConfirmBeforeSave(this,'reloadPage');" <?php echo ATTR_MODALHEADER . '="Confirmation"'; ?> <?php echo ATTR_ACTION . '="' . CREATE_USER_RESOURCE . '"'; ?> <?php echo ATTR_LIBELLE . '="Confirmez-vous la création de ' . $ldapSearchAgentObj->displayname . ' ?"'; ?> >Créer</button>
 <?php
             }
         }
@@ -700,7 +776,7 @@
 
         $sifacUser = new SifacUserClass();
         $sifacFunctions = new SifacFunctions();
-        $resultJson = $sifacFunctions->getSifacLoginFromEppn($ldapuser,SQLMODE);
+        $resultJson = $sifacFunctions->getSifacLoginFromEppn($ldapSearchAgentObj,SQLMODE);
         if ($resultJson->status == ResponseStatus::STATUT_KO)
         {
             if (isset($ciamUser->mail) and trim($ciamUser->mail . '') != '')
@@ -782,7 +858,7 @@
                 getSifacRoles('<?php echo WS_SERVER_URL . '/internalFunctionsWS.php'; ?>','<?php echo SQLMODE->value; ?>', listeCompleteSifacRole);
             </script>
 
-            Liste des rôles SIFAC dans le CIAM pour l'utilisateur <?php echo $displayName; ?> <br>
+            Liste des rôles SIFAC dans le CIAM pour l'utilisateur <?php echo $ldapSearchAgentObj->displayname; ?> <br>
             Les lignes <label class=nouvelleligne>en bleue</label> n'ont pas été sauvegardées dans le CIAM.<br>
             <table class="tableausimple" id="userroletable" name="userroletable">
                 <thead>
@@ -886,7 +962,7 @@
         }
 ?>
             <script>
-                let table = document.querySelector('#userroletable');
+                table = document.querySelector('#userroletable');
                 if (table)
                 {
                     let thList = table.querySelectorAll('th');

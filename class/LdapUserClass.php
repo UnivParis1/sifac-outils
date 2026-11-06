@@ -97,8 +97,11 @@
         {
             $ldapData = array_change_key_case($ldapData, CASE_LOWER);
             if (isset($ldapData['name'])) $this->name = trim($ldapData['name'] . '');
+            if (isset($ldapData['sn'])) $this->name = trim($ldapData['sn'] . '');
             if (isset($ldapData['firstname'])) $this->firstname = trim($ldapData['firstname'] . '');
+            if (isset($ldapData['givenname'])) $this->firstname = trim($ldapData['givenname'] . '');
             if (isset($ldapData['eppn'])) $this->eppn = trim($ldapData['eppn'] . '');
+            if (isset($ldapData['edupersonprincipalname'])) $this->eppn = trim($ldapData['edupersonprincipalname'] . '');
             if (isset($ldapData['displayname'])) $this->displayname = trim($ldapData['displayname'] . '');
             if (isset($ldapData['mail'])) $this->mail = trim($ldapData['mail'] . '');
             if (isset($ldapData['uid'])) $this->uid = trim($ldapData['uid'] . '');
