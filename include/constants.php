@@ -16,6 +16,7 @@
     const LOAD_USER_RESOURCE = 'LOADUSERRESOURCE';
     const DELETE_GROUP_RESOURCE = 'DELETEGROUPRESOURCE';
     const CREATE_GROUP_RESOURCE = 'CREATEGROUPRESOURCE';
+    const MODIFY_GROUP_RESOURCE = 'MODIFYGROUPRESOURCE';
 
     // Liste des attributs disponibles pour les boutons de l'interface ou les cellules du tableau (identite.php)
     const ATTR_ACTIVE_ELEMENT = 'sifac-active-element';
@@ -28,6 +29,9 @@
     const ATTR_INDEX = 'sifac-index';
     const ATTR_EPPN = 'sifac-eppn';
     const ATTR_CIAMUSERID = 'ciam-userid';
+    const ATTR_CIAMUSERFIRSTNAME = 'ciam-userfirstname';
+    const ATTR_CIAMUSERNAME = 'ciam-username';
+    const ATTR_CIAMUSERMAIL = 'ciam-usermail';
 
     // Pseudo classes pour identifier les cellules des tableaux des informations CIAM
     const CIAMIDENTITYIDCELLULE = 'ciamidentityidcellule';

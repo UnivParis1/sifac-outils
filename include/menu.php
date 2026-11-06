@@ -135,7 +135,7 @@
             inputAction.name = 'ciamaction';
             inputAction.id = inputAction.name;
             inputAction.value = '<?php echo LOAD_USER_RESOURCE; ?>';
-            console.log(closestForm);
+            // console.log(closestForm);
             closestForm.appendChild(inputAction);
 
             let form = $(this).closest("form");
@@ -175,8 +175,8 @@
             let selectedItem = activeElement.options[activeElement.selectedIndex];
             let currentTableRow = activeElement.closest("tr");
             let descrInput = currentTableRow.cells[1].querySelector('input');
-            console.log(currentTableRow.cells[1]);
-            console.log(descrInput);
+            // console.log(currentTableRow.cells[1]);
+            // console.log(descrInput);
             if (descrInput)
             {
                 descrInput.value = selectedItem.dataset.description;
@@ -643,6 +643,17 @@
                         <form name='create_mass' method='post' action="<?php echo "$destpagename"; ?>">
                         </form>
                         <a role="menuitem" href="<?php echo "$destpagename"; ?>" onclick="this.parentNode.click(); return false;">Créer des identités en masse</a>
+                    </li>
+<?php
+                    }
+                    if (cas_user_check_access($casUid, CIAMGROUPACCESS_MODIFY))
+                    {
+?>
+                    <li role="none" onclick="this.getElementsByTagName('form')[0].submit();">
+                        <?php $destpagename = 'modifgroupesmasse.php'; ?>
+                        <form name='group_mass' method='post' action="<?php echo "$destpagename"; ?>">
+                        </form> 
+                        <a role="menuitem" href="<?php echo "$destpagename"; ?>" onclick="this.parentNode.click(); return false;">Gestion en masse d'un groupe CIAM</a>
                     </li>
 <?php
                     }

@@ -131,6 +131,25 @@
         }
     }
 
+    function resortTable(tableName)
+    {
+        let table = document.querySelector('#'+tableName); 
+        if (table)
+        {
+            let thlist = table.querySelector('.entete').querySelectorAll('th');
+            thlist.forEach(th => { 
+                                    if (th.querySelector('.sortindicator')!==null) 
+                                    { 
+                                        if (th.querySelector('.sortindicator').textContent.trim() != '')
+                                        {
+                                            th.asc = !th.asc;
+                                            th.click();
+                                        }
+                                    }
+                                });
+        }
+    }
+
     /**
      * Trie un tableau HTML selon la colonne cliquée, et met à jour l'indicateur
      * visuel de tri (flèche montante/descendante) sur l'en-tête concerné.
