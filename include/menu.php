@@ -646,6 +646,17 @@
                     </li>
 <?php
                     }
+                    if (cas_user_check_access($casUid, CIAMGROUPACCESS_MODIFY))
+                    {
+?>
+                    <li role="none" onclick="this.getElementsByTagName('form')[0].submit();">
+                        <?php $destpagename = 'modifgroupesmasse.php'; ?>
+                        <form name='group_mass' method='post' action="<?php echo "$destpagename"; ?>">
+                        </form> 
+                        <a role="menuitem" href="<?php echo "$destpagename"; ?>" onclick="this.parentNode.click(); return false;">Gestion en masse d'un groupe CIAM</a>
+                    </li>
+<?php
+                    }
 ?>
                 </ul>
             </li>
