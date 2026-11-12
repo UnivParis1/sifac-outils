@@ -161,6 +161,22 @@
         exit;
     }
 
+
+    // On cherche toutes les identités du CIAM
+    $ciamFunctions = new CiamFunctions();
+    $responseCiamIdentities = $ciamFunctions->getCiamIdentitiesInfos(true);
+
+    if ($responseCiamIdentities->status == ResponseStatus::STATUT_KO)
+    {
+        showMessage(MSGERROR,$responseCiamIdentities->description);
+        exit;
+    }
+
+    // On trie sur le nom de famille de l'identité en conservant la clé du tableau
+    uasort($responseCiamIdentities->data, function($a, $b) {
+        return strcasecmp($a['name']['familyName'] , $b['name']['familyName']);
+    });
+
 ?>
     <form method='post'>
         <select class='listuserciamclass' size='1' name='groupid' id='groupid' onchange='this.closest("form").submit();'> 
@@ -171,7 +187,7 @@
     {
         // On trie les groupes/rôles par ordre alphabétique
         usort($responseCiamGroup->data, function($a, $b) {
-            return strcmp($a['displayName'] , $b['displayName']);
+            return strcasecmp($a['displayName'] , $b['displayName']);
         });
 
         $selected = '';
@@ -226,16 +242,19 @@
         {
             foreach($selectedGroup->ciammembers as $member)
             {
-                $response =  $ciamFunctions->getCiamIdentitiesInfosFromCiamId($member['value']);
-                if ($response->status == ResponseStatus::STATUT_KO or count($response->data) != 1)
+                if (isset($responseCiamIdentities->data[$member['value']]))
                 {
                     $ciamUser = new CiamUserClass();
-                    $ciamUser->load([]);
+                    $ciamUser->load($responseCiamIdentities->data[$member['value']]);
                 }
                 else
                 {
-                    $ciamUser = new CiamUserClass();
-                    $ciamUser->load($response->data[0]);
+                    // $ciamUser = new CiamUserClass();
+                    // $ciamUser->load([]); 
+                    var_dump("Membre pas trouvé");
+                    var_dump($member);
+
+                    continue;
                 }
 ?>
                 <tr>
@@ -268,42 +287,13 @@
     {
 ?>
         Ajouter un utilisateur à un groupe :<br>
-<?php
-        // On cherche toutes les identités du CIAM
-        $ciamFunctions = new CiamFunctions();
-        $response = $ciamFunctions->getCiamIdentitiesInfos();
-
-        if ($response->status == ResponseStatus::STATUT_KO)
-        {
-            showMessage(MSGERROR,$response->description);
-            exit;
-        }
-
-        // On trie sur le nom de famille de l'identité
-        usort($response->data, function($a, $b) {
-        return strcmp($a['name']['familyName'] , $b['name']['familyName']);
-        });
-
-?>
         <select class='listuserciamclass' size='1' name='userid' id='userid' onchange='addIdentity(groupTable,this.options[this.selectedIndex])'> 
             <option value=''>----- Veuillez sélectionner un utilisateur -----</option>
 <?php
-        $excludeDomains = [];
-        if (defined('EXCLUDE_USERDOMAIN'))
-        {
-            $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
-        }
-        foreach($response->data as $resource)
+        foreach($responseCiamIdentities->data as $resource)
         {
             $ciamUser = new CiamUserClass();
             $ciamUser->load($resource);
-
-            $userDomain = strtolower(explode('@',$ciamUser->eppn)[1]);
-            if (in_array($userDomain,$excludeDomains))
-            {
-                // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
-                continue;
-            }
 ?>
             <option value='<?php echo $ciamUser->id; ?>' 
                     <?php echo ATTR_EPPN . "='" . $ciamUser->eppn . "'" ?> 

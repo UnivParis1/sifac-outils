@@ -299,17 +299,34 @@
             return $response;
         }
 
-
         /**
-         * Récupère la liste des identités présentes dans le CIAM.
+         * Récupère la liste des identités présentes dans le CIAM (via l'API SCIM), en gérant la pagination.
+         *
+         * La fonction interroge le CIAM page par page (startIndex / count) jusqu'à avoir
+         * récupéré l'ensemble des ressources (`totalResults`). Le CIAM limitant en réalité
+         * le nombre d'éléments par page, l'incrément de pagination se base sur `itemsPerPage`
+         * retourné par le CIAM.
+         *
+         * Si $excludeDomains vaut true, les identités sont filtrées selon leur EPPN
+         * (eduPersonPrincipalName) :
+         *   - les identités dont l'EPPN est absent ou ne contient pas de '@' sont supprimées ;
+         *   - les identités dont le domaine de l'EPPN (comparé en minuscules) figure dans la
+         *     constante EXCLUDE_USERDOMAIN sont supprimées.
+         *
+         * @param bool $excludeDomains Si true, exclut les identités dont l'EPPN est
+         *                             inexploitable ou appartient à un domaine listé dans
+         *                             EXCLUDE_USERDOMAIN (défaut : false).
          *
          * @return ResponseClass Résultat contenant :
-         *   - status (ResponseStatus::STATUT_OK|STATUT_KO)
-         *   - data (array liste des identités SCIM)
-         *   - description (string message d’erreur si KO)
-         * 
+         *   - status (ResponseStatus::STATUT_OK|STATUT_KO) :
+         *       STATUT_OK si la récupération a réussi (y compris si aucune identité n'est trouvée),
+         *       STATUT_KO en cas d'échec (token indisponible, erreur cURL ou HTTP,
+         *       réponse SCIM non conforme)
+         *   - data (array) : liste des identités SCIM indexée par l'id de l'identité
+         *       (tableau vide si KO ou si aucune identité)
+         *   - description (string) : message d'erreur si KO, chaîne vide sinon
          */
-        public function getCiamIdentitiesInfos() :ResponseClass
+        public function getCiamIdentitiesInfos(bool $excludeDomains = false) :ResponseClass
         {
             $resultJson = new ResponseClass();
             $resultJson->status = ResponseStatus::STATUT_KO;
@@ -323,7 +340,7 @@
             }
             else
             {
-                $count = 50;
+                $count = 120; // En vrai, le CIAM limite le nombre d'items à 100
                 $startIndex = 1;
 
                 $exitloop = false;
@@ -391,13 +408,14 @@
                     }
 
                     $resultJson->data = array_merge($resultJson->data, $response['Resources']);
-                    if (count($response['Resources']) != $count)
+                    // if (count($response['Resources']) != $count)
+                    if (count($resultJson->data) >= $response['totalResults'])
                     {
                         $exitloop = true;
                     }
                     else
                     {
-                        $startIndex += $count;
+                        $startIndex += $response['itemsPerPage']; // $count;
                     }
                 }
 
@@ -412,6 +430,36 @@
                 {
                     $resultJson->status = ResponseStatus::STATUT_OK;
                     $resultJson->description = '';
+
+                    // On retourne le tableau avec comme clé l'id de l'identité
+                    $resultJson->data = array_column($resultJson->data, null, 'id');
+
+                    if ($excludeDomains)
+                    {
+                        static $excludeDomainsArray = [];
+                        // Si on a défini des domaines à exclure et qu'il ne sont pas initialisé en majuscule
+                        if (defined('EXCLUDE_USERDOMAIN') and count($excludeDomainsArray)==0)
+                        {
+                            $excludeDomainsArray = array_map('strtolower', EXCLUDE_USERDOMAIN);
+                        }
+                        foreach($resultJson->data as $userKey => $userResource)
+                        {
+                            if (!isset($userResource['urn:ietf:params:scim:schemas:extension:custom:2.0:User']['eduPersonPrincipalName']) or !str_contains($userResource['urn:ietf:params:scim:schemas:extension:custom:2.0:User']['eduPersonPrincipalName'],'@'))
+                            {
+                                // l'EPPN n'existe pas ou il ne contient pas de symbole '@' => EPPN non exploitable
+                                unset($resultJson->data[$userKey]);
+                            }
+                            else
+                            {
+                                $userDomain = strtolower(explode('@',$userResource['urn:ietf:params:scim:schemas:extension:custom:2.0:User']['eduPersonPrincipalName'])[1]);
+                                if (in_array($userDomain,$excludeDomainsArray))
+                                {
+                                    // Si le domaine de l'EPPN est un domaine exclu, alors on le supprime
+                                    unset($resultJson->data[$userKey]);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -422,7 +470,6 @@
             }
 
             return $resultJson;
-
         }
 
 
@@ -927,7 +974,7 @@
             }
             else
             {
-                $count = 30;
+                $count = 100;
                 $startIndex = 1;
                 $exitloop = false;
                 while (!$exitloop)
@@ -987,13 +1034,14 @@
 
                     $resultJson->data = array_merge($resultJson->data, $response['Resources']);
 
-                    if (count($response['Resources']) != $count)
+                    // if (count($response['Resources']) != $count)
+                    if (count($resultJson->data) >= $response['totalResults'])
                     {
                         $exitloop = true;
                     }
                     else
                     {
-                        $startIndex += $count;
+                        $startIndex += $response['itemsPerPage'];  // $count;
                     }
                 }
                 $resultJson->status = ResponseStatus::STATUT_OK;
@@ -1474,12 +1522,6 @@
                 $uppercaseCiamRoles = array_map('strtoupper',CIAMROLES);
             }
 
-            $excludeDomains = [];
-            if (defined('EXCLUDE_USERDOMAIN'))
-            {
-                $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
-            }
-
             $infos = explode(';',$lineInfos);
             $agent=trim($infos[0]);
             if ($agent=='')
@@ -1648,7 +1690,7 @@
 
                 // On vérifie si l'EPPN existe déjà dans le CIAM => Vérification case-insensitive
                 $ciamfunctions = new CiamFunctions();
-                $response = $ciamfunctions->getCiamIdentitiesInfos();
+                $response = $ciamfunctions->getCiamIdentitiesInfos(true);
                 if ($response->status == ResponseStatus::STATUT_OK)
                 {
                     $data = $response->data;
@@ -1657,16 +1699,7 @@
                         $tempCiamUser = new CiamUserClass();
                         $tempCiamUser->load($userInfo,$fullSifacRoleArray);
 
-                        $userDomain = strtolower(explode('@',$tempCiamUser->eppn)[1]);
-                        if (in_array($userDomain,$excludeDomains))
-                        {
-                            // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
-                            error_log(basename(__FILE__) . " " . stripAccents(" L'EPPN est dans un domaine exclu " . $tempCiamUser->eppn . "."));  
-                            continue;
-                        }
-
-                        // Si l'eppn de l'utilisateur (=> $ldapeppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
-                        // if (strcasecmp($tempCiamUser->eppn,$ldapeppn) == 0)
+                        // Si l'eppn de l'utilisateur (=> $eppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
                         if (strcasecmp($tempCiamUser->eppn,$eppn) == 0)
                         {
                             $response->status = ResponseStatus::STATUT_KO;

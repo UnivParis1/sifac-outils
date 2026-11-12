@@ -563,7 +563,7 @@
 
                 // On trie les groupes par ordre alphabétique
                 usort($response->data, function($a, $b) {
-                    return strcmp($a['displayName'] , $b['displayName']);
+                    return strcasecmp($a['displayName'] , $b['displayName']);
                 });
 
                 // var_dump($response->data['Resources']);

@@ -78,7 +78,7 @@
     $ciamRolesUsersArray = [];
     $responseCiamRole = new ResponseClass();
     $responseCiamRole->data = [];
-    $responseIdentities = $ciamFunctions->getCiamIdentitiesInfos();
+    $responseIdentities = $ciamFunctions->getCiamIdentitiesInfos(true);
     if ($responseIdentities->status == ResponseStatus::STATUT_KO)
     {
         $responseCiamRole->status = ResponseStatus::STATUT_KO;
@@ -86,21 +86,10 @@
     }
     elseif (defined('CIAMROLES'))
     {
-        $excludeDomains = [];
-        if (defined('EXCLUDE_USERDOMAIN'))
-        {
-            $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
-        }
         foreach($responseIdentities->data as $ciamUserData)
         {
             $ciamUser = new CiamUserClass();
             $ciamUser->load($ciamUserData);
-            $userDomain = strtolower(explode('@',$ciamUser->eppn)[1]);
-            if (in_array($userDomain,$excludeDomains))
-            {
-                // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
-                continue;
-            }
 
             // On initialise les informations comme si elle venait de groupes/rôles CIAM
             foreach($ciamUser->ciamroles as $ciamRoleKey => $ciamRoleId)
@@ -147,7 +136,7 @@
     {
         // On trie les groupes/rôles par ordre alphabétique
         usort($responseCiamGroup->data, function($a, $b) {
-            return strcmp($a['displayName'] , $b['displayName']);
+            return strcasecmp($a['displayName'] , $b['displayName']);
         });
 
         $selected = '';
@@ -270,7 +259,7 @@
     {
         // On trie les groupes/rôles par ordre alphabétique
         usort($responseCiamRole->data, function($a, $b) {
-            return strcmp($a['displayName'] , $b['displayName']);
+            return strcasecmp($a['displayName'] , $b['displayName']);
         });
 
         $selected = '';

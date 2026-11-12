@@ -73,7 +73,7 @@
     const ALLUSERS = 'all';
 
     $ciamFunctions = new CiamFunctions();
-    $response = $ciamFunctions->getCiamIdentitiesInfos();
+    $response = $ciamFunctions->getCiamIdentitiesInfos(true);
 
     if ($response->status == ResponseStatus::STATUT_KO)
     {
@@ -81,9 +81,9 @@
         exit;
     }
 
-    // On trie sur le nom de famille de l'identité
-    usort($response->data, function($a, $b) {
-    return strcmp($a['name']['familyName'] , $b['name']['familyName']);
+    // On trie sur le nom de famille de l'identité en conservant la clé du tableau
+    uasort($response->data, function($a, $b) {
+        return strcasecmp($a['name']['familyName'] , $b['name']['familyName']);
     });
 
 ?>
@@ -101,22 +101,10 @@
 <?php
     if ($response->status == ResponseStatus::STATUT_OK)
     {
-        $excludeDomains = [];
-        if (defined('EXCLUDE_USERDOMAIN'))
-        {
-            $excludeDomains = array_map('strtolower', EXCLUDE_USERDOMAIN);
-        }
         foreach($response->data as $resource)
         {
             $ciamUser = new CiamUserClass();
             $ciamUser->load($resource);
-
-            $userDomain = strtolower(explode('@',$ciamUser->eppn)[1]);
-            if (in_array($userDomain,$excludeDomains))
-            {
-                // Si le domaine de l'EPPN est un domaine exclu, alors on l'ignore => Continue
-                continue;
-            }
 
             $selected = '';
             if (!is_null($userId) and ($ciamUser->id == $userId or $userId == ALLUSERS))

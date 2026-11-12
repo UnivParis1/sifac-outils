@@ -419,7 +419,7 @@
 
                     // On vérifie si l'EPPN existe déjà dans le CIAM => Vérification case-insensitive
                     $ciamfunctions = new CiamFunctions();
-                    $response = $ciamfunctions->getCiamIdentitiesInfos();
+                    $response = $ciamfunctions->getCiamIdentitiesInfos(true);
                     if ($response->status == ResponseStatus::STATUT_OK)
                     {
                         $data = $response->data;
@@ -427,8 +427,7 @@
                         {
                             $tempCiamUser = new CiamUserClass();
                             $tempCiamUser->load($userInfo,$fullSifacRoleArray);
-                            // Si l'eppn de l'utilisateur (=> $ldapeppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
-                            // if (strcasecmp($tempCiamUser->eppn,$ldapeppn) == 0)
+                            // Si l'eppn de l'utilisateur (=> $eppn) est un des utilisateur déjà dans le CIAM ($tempCiamUser->eppn)
                             if (strcasecmp($tempCiamUser->eppn,$eppn) == 0)
                             {
                                 $response->status = ResponseStatus::STATUT_KO;
