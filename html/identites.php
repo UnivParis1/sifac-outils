@@ -696,7 +696,10 @@
                 $('#ldap-user')
                     .on('select2:open', function (e) {
                         setTimeout(selectToSetFocus,1);
-                        document.getElementsByClassName('select2-search__field').focus();
+                        if (document.getElementsByClassName('select2-search__field').length >0)
+                        {
+                            document.getElementsByClassName('select2-search__field')[0].focus();
+                        }
                     });                
             });
             </script>

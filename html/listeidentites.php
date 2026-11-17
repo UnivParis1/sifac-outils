@@ -117,8 +117,10 @@
                     $closeModifyLink = '</a>';
                 }
 
-                $htmlText .= '<button class="collapsible" ' . ATTR_EPPN . '="' . $ciamUser->eppn .'">' . $openModifyLink . $ciamUser->displayname . ' &lt;' . $ciamUser->mail . '&gt;' . $closeModifyLink .'</button>' . PHP_EOL;
-                $htmlText .= '<div class="collapsecontent">' . PHP_EOL;
+                // $htmlText .= '<button class="collapsible" ' . ATTR_EPPN . '="' . $ciamUser->eppn .'">' . $openModifyLink . $ciamUser->displayname . ' &lt;' . $ciamUser->mail . '&gt;' . $closeModifyLink .'</button>' . PHP_EOL;
+                $htmlText .= '<label class="separator" ' . ATTR_EPPN . '="' . $ciamUser->eppn .'">' . $openModifyLink . $ciamUser->displayname . ' &lt;' . $ciamUser->mail . '&gt;' . $closeModifyLink .'</label>' . PHP_EOL;
+                // $htmlText .= '<div class="collapsecontent">' . PHP_EOL;
+                $htmlText .= '<div>' . PHP_EOL;
                 $htmlText .= '<br>' . PHP_EOL;
                 $htmlText .= $ciamUser->identityHtml(true);
                 $htmlText .= "<br>" . PHP_EOL;
@@ -298,7 +300,9 @@
          */
         function modifyuser(currentelement)
         {
-            let eppn = currentelement.closest("button").getAttribute('<?php echo ATTR_EPPN; ?>');
+            console.log(currentelement);
+            // let eppn = currentelement.closest("button").getAttribute('<?php echo ATTR_EPPN; ?>');
+            let eppn = currentelement.closest("label").getAttribute('<?php echo ATTR_EPPN; ?>');
             let form = document.createElement('form');
             form.method = 'post';
             form.action = 'identites.php';

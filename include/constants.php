@@ -32,6 +32,7 @@
     const ATTR_CIAMUSERFIRSTNAME = 'ciam-userfirstname';
     const ATTR_CIAMUSERNAME = 'ciam-username';
     const ATTR_CIAMUSERMAIL = 'ciam-usermail';
+    const ATTR_CIAMGROUPID = 'ciam-groupid';
 
     // Pseudo classes pour identifier les cellules des tableaux des informations CIAM
     const CIAMIDENTITYIDCELLULE = 'ciamidentityidcellule';

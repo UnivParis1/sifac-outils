@@ -166,9 +166,17 @@
 
                 if (($ciamGroup->id == $groupId) or ($groupId == ALLGROUPS))
                 {
+                    $openModifyLink= '';
+                    $closeModifyLink = '';
+                    if (cas_user_check_access($casUid, CIAMGROUPACCESS_MODIFY))
+                    {
+                        $openModifyLink = '<a data-tip="Cliquez sur le nom du groupe pour le modifier." onclick="event.stopPropagation(); modifygroup(this);">';
+                        $closeModifyLink = '</a>';
+                    }
+
                     $tableName = "table_" . $ciamGroup->displayname;
-                    $htmlText .= '<button class="collapsible">Groupe : ' . $ciamGroup->displayname .  ' </button>' . PHP_EOL;
-                    $htmlText .= '<div class="collapsecontent">' . PHP_EOL;
+                    $htmlText .= '<label class="separator" ' . ATTR_CIAMGROUPID . '="' . $ciamGroup->id . '">' . $openModifyLink . 'Groupe : ' . $ciamGroup->displayname . $closeModifyLink . '</label>' . PHP_EOL;
+                    $htmlText .= '<div>' . PHP_EOL;
                     $htmlText .= '<br>' . PHP_EOL;
                     $htmlText .= "<table class='tableausimple' id='$tableName' name='$tableName'>" . PHP_EOL;
                     $htmlText .= "    <thead>" . PHP_EOL;
@@ -439,6 +447,24 @@
             ciamActionInput.name = 'ciamaction';
             ciamActionInput.value = '<?php echo LOAD_USER_RESOURCE; ?>';
             form.appendChild(ciamActionInput);
+            document.body.appendChild(form);
+            form.submit();
+            form.remove();
+        }
+
+        function modifygroup(currentElement)
+        {
+            let ciamGroupId = currentElement.closest("label").getAttribute('<?php echo ATTR_CIAMGROUPID; ?>');
+            let form = document.createElement('form');
+            form.method = 'post';
+            form.action = 'modifgroupesmasse.php';
+            // form.target="_blank";
+            let ciamGroupIdInput = document.createElement('input');
+            ciamGroupIdInput.type = 'hidden';
+            ciamGroupIdInput.name = 'groupid';
+            ciamGroupIdInput.id = ciamGroupId.name;
+            ciamGroupIdInput.value = ciamGroupId;
+            form.appendChild(ciamGroupIdInput);
             document.body.appendChild(form);
             form.submit();
             form.remove();
