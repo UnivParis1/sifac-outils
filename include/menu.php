@@ -139,7 +139,14 @@
             closestForm.appendChild(inputAction);
 
             let form = $(this).closest("form");
-            form.find('#agent').val(ui.item.displayName);
+            if (form.find('#agent').length > 0)
+            {
+                form.find('#agent').val(ui.item.displayName);
+            }
+            if (form.find('#searchfield').length > 0)
+            {
+                form.find('#searchfield').val(ui.item.eduPersonPrincipalName);
+            }
             form.submit();
             return false;
         };

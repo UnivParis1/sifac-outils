@@ -47,6 +47,8 @@
 ?>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/fr.js"></script>
+
     <link rel="stylesheet" href="./css/application.css?dummy=<?php echo rand(1,9999999999); ?>" type="text/css" media="all" />
 </head>
 <body class="bodyhtml">
@@ -97,6 +99,20 @@
     }
 
     $searchField = '';
+    $ldapName = null;
+    $ldapFirstname = null;
+    $ldapUid = null;
+    $ldapDisplayName = null;
+    $ciamGroupList = null;
+    $sifacRoleNameList = null;
+    $checkSifacRoleList = null;
+    $sifacDescriptionRoleList = null;
+    $sifacCiamRoleList = null;
+    $ldapMail = null;
+    $eppn = null;
+    $ciamId = null;
+    $ciamActive = false;
+
     $listeLdapAgent = [];
     $ldapSearchAgentObj = new LdapUserClass();
 
@@ -104,8 +120,10 @@
     {
 
         $ciamAction = filter_input(INPUT_POST, 'ciamaction', FILTER_UNSAFE_RAW);
+        $searchField = filter_input(INPUT_POST, 'searchfield', FILTER_UNSAFE_RAW);
+
         // Si on ne demande pas à charger un agent, on doit prendre le searfield input (s'il existe)
-        if ($ciamAction!=LOAD_USER_RESOURCE)
+        if (trim($searchField . '') != '')  //($ciamAction!=LOAD_USER_RESOURCE)
         {
             $searchField = filter_input(INPUT_POST, 'searchfield', FILTER_UNSAFE_RAW);
         }
@@ -114,49 +132,8 @@
         {
             $searchField = filter_input(INPUT_POST, 'agent', FILTER_UNSAFE_RAW);
         }
-        $ldapName = filter_input(INPUT_POST, 'ldapname', FILTER_UNSAFE_RAW);
-        $ldapFirstname = filter_input(INPUT_POST, 'ldapfirstname', FILTER_UNSAFE_RAW);
-        $ldapUid = filter_input(INPUT_POST, 'ldapuid', FILTER_UNSAFE_RAW);
-        $ldapDisplayName = filter_input(INPUT_POST, 'ldapdisplayname', FILTER_UNSAFE_RAW);
 
-        $ciamGroupList = filter_input(INPUT_POST, 'ciamgroup', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
-        if (!is_array($ciamGroupList))
-        {
-            $ciamGroupList = null;
-        }
-        $sifacRoleNameList = filter_input(INPUT_POST, 'sifacrolename', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
-        if (!is_array($sifacRoleNameList))
-        {
-            $sifacRoleNameList = null;
-        }
-        $checkSifacRoleList = filter_input(INPUT_POST, 'checksifacrole', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
-        if (!is_array($checkSifacRoleList))
-        {
-            $checkSifacRoleList = null;
-        }
-        $sifacDescriptionRoleList = filter_input(INPUT_POST, 'sifacdescriptionrole', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
-        if (!is_array($sifacDescriptionRoleList))
-        {
-            $sifacDescriptionRoleList = null;
-        }
-        $sifacCiamRoleList = filter_input(INPUT_POST, 'ciamroles', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
-        // error_log(basename(__FILE__) . stripAccents(" Récupération de la liste des ciamrolelist => " . print_r($sifacCiamRoleList,true)));
-        if (!is_array($sifacCiamRoleList))
-        {
-            error_log(basename(__FILE__) . stripAccents(" ciamrolelist n'est pas un tableau => null"));
-            $sifacCiamRoleList = null;
-        }
-
-        $ldapMail = filter_input(INPUT_POST, 'ldapmail', FILTER_UNSAFE_RAW);
-        if (!filter_var($ldapMail, FILTER_VALIDATE_EMAIL)) 
-        {
-            $ldapMail = null;
-        }
-        $eppn = filter_input(INPUT_POST, 'ldapeppn', FILTER_UNSAFE_RAW);
-        if (!filter_var($eppn, FILTER_VALIDATE_EMAIL)) 
-        {
-            $eppn = null;
-        }
+        // Le ciamid est posté si on vient de la page de visualistation des groupes/rôles
         $ciamId = filter_input(INPUT_POST, 'ciamid', FILTER_UNSAFE_RAW);
         // /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
         // /^[0-9a-fA-F-]+$/
@@ -164,10 +141,58 @@
         {
             $ciamId = null;
         }
-        $ciamActive = filter_input(INPUT_POST, 'ciamactive', FILTER_UNSAFE_RAW);
-        if (!filter_var($ciamActive, FILTER_VALIDATE_BOOL)) 
+
+
+        if ($ciamAction != LOAD_USER_RESOURCE)
         {
-            $ciamActive = false;
+            $ldapName = filter_input(INPUT_POST, 'ldapname', FILTER_UNSAFE_RAW);
+            $ldapFirstname = filter_input(INPUT_POST, 'ldapfirstname', FILTER_UNSAFE_RAW);
+            $ldapUid = filter_input(INPUT_POST, 'ldapuid', FILTER_UNSAFE_RAW);
+            $ldapDisplayName = filter_input(INPUT_POST, 'ldapdisplayname', FILTER_UNSAFE_RAW);
+
+            $ciamGroupList = filter_input(INPUT_POST, 'ciamgroup', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
+            if (!is_array($ciamGroupList))
+            {
+                $ciamGroupList = null;
+            }
+            $sifacRoleNameList = filter_input(INPUT_POST, 'sifacrolename', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
+            if (!is_array($sifacRoleNameList))
+            {
+                $sifacRoleNameList = null;
+            }
+            $checkSifacRoleList = filter_input(INPUT_POST, 'checksifacrole', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
+            if (!is_array($checkSifacRoleList))
+            {
+                $checkSifacRoleList = null;
+            }
+            $sifacDescriptionRoleList = filter_input(INPUT_POST, 'sifacdescriptionrole', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
+            if (!is_array($sifacDescriptionRoleList))
+            {
+                $sifacDescriptionRoleList = null;
+            }
+            $sifacCiamRoleList = filter_input(INPUT_POST, 'ciamroles', FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY);
+            // error_log(basename(__FILE__) . stripAccents(" Récupération de la liste des ciamrolelist => " . print_r($sifacCiamRoleList,true)));
+            if (!is_array($sifacCiamRoleList))
+            {
+                error_log(basename(__FILE__) . stripAccents(" ciamrolelist n'est pas un tableau => null"));
+                $sifacCiamRoleList = null;
+            }
+
+            $ldapMail = filter_input(INPUT_POST, 'ldapmail', FILTER_UNSAFE_RAW);
+            if (!filter_var($ldapMail, FILTER_VALIDATE_EMAIL)) 
+            {
+                $ldapMail = null;
+            }
+            $eppn = filter_input(INPUT_POST, 'ldapeppn', FILTER_UNSAFE_RAW);
+            if (!filter_var($eppn, FILTER_VALIDATE_EMAIL)) 
+            {
+                $eppn = null;
+            }
+            $ciamActive = filter_input(INPUT_POST, 'ciamactive', FILTER_UNSAFE_RAW);
+            if (!filter_var($ciamActive, FILTER_VALIDATE_BOOL)) 
+            {
+                $ciamActive = false;
+            }
         }
 
         if (!is_null($ciamAction))
@@ -202,7 +227,7 @@
                         }
                         else
                         {
-                            if (strtolower($ldapResponse->data[0][LDAP_AGENT_UID_ATTR]) == strtolower($casUid))
+                            if (mb_strtolower($ldapResponse->data[0][LDAP_AGENT_UID_ATTR]) == mb_strtolower($casUid))
                             {
                                 $response->status = ResponseStatus::STATUT_KO;
                                 $response->description = "Vous ne pouvez pas modifier votre propre identité.";
@@ -588,15 +613,15 @@
     }
 
 ?>
-    <form method='post'>
+    <form method='post' id='selectidentity' name='selectidentity'>
         Personne à rechercher : <br>
         <input type='hidden' id='searchfield' name='searchfield' value="<?php echo htmlspecialchars($searchField); ?>"/>
-        <input id='agent' name='agent' placeholder='Nom et/ou prenom' value='<?php echo htmlspecialchars($searchField); ?>' size=40 />
 
 <?php
     if (LDAP_MODE == LdapSearchClass::LDAP_MODE_WSGROUPS)
     {
 ?>
+        <input id='agent' name='agent' placeholder='Nom et/ou prenom' value='<?php echo htmlspecialchars($searchField); ?>' size=40 />
         <br>
         <br>
         <script>
@@ -612,74 +637,78 @@
         if (cas_user_check_access($casUid, CIAMGROUPACCESS_MODIFY))
         {
 ?>
-            <button id='submitselect' name='submitselect' class='sifacbouton sifacdocumentbouton' type='button' <?php echo ATTR_ACTION . '="' . LOAD_USER_RESOURCE . '"'; ?> onclick="clearPageData(); reloadPage(this);">Valider</button>
+            <!-- <button id='submitselect' name='submitselect' class='sifacbouton sifacdocumentbouton' type='button' <?php echo ATTR_ACTION . '="' . LOAD_USER_RESOURCE . '"'; ?> onclick="clearPageData(); reloadPage(this);">Valider</button>
             <br>
-            <br>
-<?php
-            if (count($listeLdapAgent)>0)
-            {
-?>
-                <table class="tableausimple" id='tableldapselect' name='tableldapselect'>
-                    <thead>
-                        <tr class="entete" >
-                            <th class='titresimple cursorpointer'>Nom <span class='sortindicator'> </span></th>
-                            <th class='titresimple cursorpointer'>Prénom <span class='sortindicator'> </span></th>
-                            <th class='titresimple cursorpointer'>EPPN <span class='sortindicator'> </span></th>
-                            <th class='titresimple cursorpointer'>Mail <span class='sortindicator'> </span></th>
-                            <th class='titresimple '>Sélection</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-<?php
-                foreach($listeLdapAgent as $ldapAgentObj)
-                {
-?>
-                        <tr class=''>
-                            <td class="cellulesimple <?php echo LDAPNAMECELLULE; ?>"><?php echo $ldapAgentObj->name; ?></td>
-                            <td class="cellulesimple <?php echo LDAPFIRSTNAMECELLULE; ?>"><?php echo $ldapAgentObj->firstname; ?></td>
-                            <td class="cellulesimple <?php echo LDAPEPPNCELLULE; ?>"><?php echo $ldapAgentObj->eppn; ?></td>
-                            <td class="cellulesimple <?php echo LDAPMAILCELLULE; ?>"><?php echo $ldapAgentObj->mail; ?></td>
-                            <td class="cellulesimple"><button type='button' class='sifacbouton sifacdocumentbouton'  <?php echo ATTR_ACTION . '="' . LOAD_USER_RESOURCE . '"'; ?> onclick="document.getElementById('agent').value=getCellValue(this.closest('tr'), '<?php echo LDAPEPPNCELLULE; ?>'); reloadPage(this);">Sélection</button></td>
-                        </tr>
-<?php
-                }
-?>
-                    </tbody>
-                </table>
-                <script>
-                    let table = document.querySelector('#tableldapselect');
-                    if (table)
-                    {
-                        let thList = table.querySelectorAll('th');
-                        let numColonneTri = 0;
-                        let sort = false;
-                        thList.forEach(th => { 
-                                    if (th.querySelector('.sortindicator')!==null) 
-                                    {
-                                        // Si le contenu HTML du sortindicator n'est pas vide => On a trié sur cette colonne
-                                        if (th.querySelector('.sortindicator').innerHTML.trim()!="")
-                                        {
-                                            numColonneTri = th.cellIndex;
-                                            sort = !th.asc;
-                                        }
-                                    }
+            <br> -->
+            <select id="ldap-user" name="ldap-user" style="width: 400px;"></select>
+            <script>
+            $(function () {
+                $('#ldap-user').select2({
+                    language: 'fr',
+                    placeholder: 'Rechercher une identité (4 caractères min.)',
+                    allowClear: true,
+                    minimumInputLength: 4,
+                    ajax: {
+                        url: '<?php echo WS_SERVER_URL; ?>/internalFunctionsWS.php',
+                        dataType: 'json',
+                        delay: 500, // anti-rebond : évite une requête à chaque frappe
+                        data: function (params) {
+                            return {
+                                inputdata : params.term,
+                                methode : '<?php echo INTERNALWS_LDAPSEARCH; ?>'
+                            };
+                        },
+                        processResults: function (data) {
+                            // Si on a rencontré un problème dans le WS, on affiche le message d'erreur
+                            if (data.status == '<?php echo ResponseStatus::STATUT_KO->value ?>')
+                            {
+                                return { 
+                                    results: [{ loading : true, text : data.description}]
+                                 };
+                            }
+                            else
+                            {
+                                // On doit définir la clé id pour tous les éléments trouvés dans LDAP
+                                data.data.forEach(element => {
+                                    element.id = element.edupersonprincipalname;
                                 });
-
-                        // // On initialise les evènements pour le tri
-                        sortTableInit(table.id,numColonneTri);
-                        // On trie le tableau sur la colonne précédemment triée et dans le même ordre si cela était défini
-                        table.querySelectorAll('th')[numColonneTri].asc = sort;
-                        table.querySelectorAll('th')[numColonneTri].click();
+                                return { results: data.data };
+                            }
+                        },
+                        cache: false
+                    },
+                    templateResult: function (item) {
+                        if (item.loading) return item.text;
+                        return $('<div>')
+                            .append($('<strong>').text(item.displayname))
+                            .append($('<small style="display:block;">').text('mail : ' + item.mail || ''))
+                            .append($('<small style="display:block;">').text('eppn : ' + item.edupersonprincipalname || ''));
                     }
-                </script>
-                <br>
-                <br>
+                });
+                $('#ldap-user')
+                    .on('select2:select', function (e) {
+                        let currentform = this.closest('form');
+                        let postElement = currentform.querySelector('#searchfield');
+                        postElement.value = $(this).val();
+                        postElement.setAttribute('<?php echo ATTR_ACTION; ?>', '<?php echo LOAD_USER_RESOURCE; ?>');
+                        reloadPage(postElement);
+                    });                
+                $('#ldap-user')
+                    .on('select2:open', function (e) {
+                        setTimeout(selectToSetFocus,1);
+                        document.getElementsByClassName('select2-search__field').focus();
+                    });                
+            });
+            </script>
+            <br>
+            <br>
 <?php
-            }
         }
     }
 ?>
+    </form>
+    <form method='post' id='actionidentity' name='actionidentity'>
+        <input type='hidden' id='searchfield' name='searchfield' value="<?php echo htmlspecialchars($searchField); ?>"/>
         <div id='divldapinfouser' name='divldapinfouser'>
             <table class="tableausimple" id='tableldapinfouser' name='tableldapinfouser'>
                 <thead>
@@ -705,7 +734,7 @@
             </table>
         </div>
         <br>
-    <br>
+        <br>
 <?php
     // if ($eppn <> '')
     if (trim($ldapSearchAgentObj->eppn) <> '')

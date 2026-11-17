@@ -576,7 +576,7 @@
                     $roleKey = $ciamGroup->id;
                     $roleDescription = $ciamGroup->displayname;
 
-                    if (str_starts_with(strtoupper($ciamGroup->displayname),strtoupper(INTERNAL_ROLE_PREFIX)))
+                    if (str_starts_with(mb_strtoupper($ciamGroup->displayname),mb_strtoupper(INTERNAL_ROLE_PREFIX)))
                     {
                         if ($htmlCustomGroupText == '')
                         {

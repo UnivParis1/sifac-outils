@@ -102,7 +102,7 @@
 
                 // On peut maintenant l'effacer du CIAM après avoir vérifier que c'est rôle applicatif
                 // En théorie c'est toujours le cas, mais il vaut mieux assurer
-                if (str_starts_with(strtoupper($ciamGroupName),strtoupper(INTERNAL_ROLE_PREFIX)))
+                if (str_starts_with(mb_strtoupper($ciamGroupName),mb_strtoupper(INTERNAL_ROLE_PREFIX)))
                 {
                     $ciamGroup = new CiamGroupClass();
                     $ciamGroup->id = $ciamGroupId;
@@ -124,10 +124,10 @@
     {
         foreach($newCiamGroupList as $ciamGroupName => $value)
         {
-            if (str_starts_with(strtoupper($ciamGroupName),strtoupper(INTERNAL_ROLE_PREFIX)))
+            if (str_starts_with(mb_strtoupper($ciamGroupName),mb_strtoupper(INTERNAL_ROLE_PREFIX)))
             {
                 $ciamGroup = new CiamGroupClass();
-                $ciamGroup->displayname = strtoupper($ciamGroupName);
+                $ciamGroup->displayname = mb_strtoupper($ciamGroupName);
                 $response = $ciamfunctions->createCiamGroupInfos($ciamGroup);
                 if ($response->status != ResponseStatus::STATUT_OK)
                 {
@@ -148,31 +148,6 @@
         }
     }
 
-    // foreach(CIAMGROUPACCESS_ADMIN as $ciamgroupname)
-    // {
-    //     if (str_starts_with(strtoupper($ciamgroupname),strtoupper(INTERNAL_ROLE_PREFIX)))
-    //     {
-    //         $ciamGroup = new CiamGroupClass();
-    //         $ciamGroup->displayname = strtoupper($ciamgroupname);
-    //         $response = $ciamfunctions->createCiamGroupInfos($ciamGroup);
-    //         if ($response->status != ResponseStatus::STATUT_OK)
-    //         {
-    //             if (str_contains($response->description, ' 409 ')) // 409 = HTTP Code pour 'Conflict' : Le groupe existe déjà
-    //             {
-    //                 showMessage(MSGWARNING,"Le groupe $ciamgroupname est déjà présent dans le CIAM");   
-    //             }
-    //             else
-    //             {
-    //                 showMessage(MSGERROR,$response->description);
-    //             }
-    //         }
-    //         else
-    //         {
-    //             showMessage(MSGINFO,"Le groupe d'autorisation $ciamgroupname vient d'être crée.");  
-    //         }
-    //     }
-    // }
-
     $fullCiamGroupList = [];
     $response = $ciamfunctions->getListCiamGroupInfos();
     if ($response->status != ResponseStatus::STATUT_OK)
@@ -185,7 +160,7 @@
         {
             $ciamGroup = new CiamGroupClass();
             $ciamGroup->load($groupData);
-            if (str_starts_with(strtoupper($ciamGroup->displayname),strtoupper(INTERNAL_ROLE_PREFIX)))
+            if (str_starts_with(mb_strtoupper($ciamGroup->displayname),mb_strtoupper(INTERNAL_ROLE_PREFIX)))
             {
                 $fullCiamGroupList[$ciamGroup->displayname] = $ciamGroup;
             }
@@ -232,7 +207,7 @@
         // foreach((CIAMGROUPACCESS_ADMIN + CIAMGROUPACCESS_CREATE + CIAMGROUPACCESS_MODIFY + CIAMGROUPACCESS_CONSULT) as $ciamgroupname)
         foreach(array_unique(array_merge(CIAMGROUPACCESS_ADMIN, CIAMGROUPACCESS_CREATE, CIAMGROUPACCESS_MODIFY, CIAMGROUPACCESS_CONSULT)) as $ciamgroupname)
         {
-            if (str_starts_with(strtoupper($ciamgroupname),strtoupper(INTERNAL_ROLE_PREFIX)) and !(isset($fullCiamGroupList[strtoupper($ciamgroupname)])))
+            if (str_starts_with(mb_strtoupper($ciamgroupname),mb_strtoupper(INTERNAL_ROLE_PREFIX)) and !(isset($fullCiamGroupList[mb_strtoupper($ciamgroupname)])))
             {
                 if ($firstrow)
                 {
@@ -253,7 +228,7 @@
 ?>
                 <tr class=''>
                     <td class="cellulesimple"><?php echo $ciamgroupname ?></td>
-                    <td class="cellulesimple"><input type='checkbox' id='newcustomgroup[<?php echo strtoupper($ciamgroupname); ?>]' name='newcustomgroup[<?php echo strtoupper($ciamgroupname); ?>]'></td>
+                    <td class="cellulesimple"><input type='checkbox' id='newcustomgroup[<?php echo mb_strtoupper($ciamgroupname); ?>]' name='newcustomgroup[<?php echo mb_strtoupper($ciamgroupname); ?>]'></td>
                 </tr>
 <?php
             }
@@ -326,31 +301,6 @@
 
 <?php
     }
-
-    // var_dump($response);
-    // $ciamGroupId = '';
-
-    // if (count($response->data)>0)
-    // {
-    //     $ciamGroupData = $response->data[0];
-    //     $ciamGroup = new CiamGroupClass();
-    //     $ciamGroup->load($ciamGroupData);
-
-    //     var_dump($ciamGroup->jsonString(true));
-    //     $ciamGroupId = $ciamGroup->id;
-    // }
-    
-    // if ($ciamGroupId != '')
-    // {
-    //     $ciamGroup = new CiamGroupClass();
-    //     $ciamGroup->id = $ciamGroupId;
-    //     $response = $ciamfunctions->deleteCiamGroup($ciamGroup);
-
-    //     var_dump($response);
-    // }
-
-
-    // var_dump($_POST);
 
 ?>
 </body>

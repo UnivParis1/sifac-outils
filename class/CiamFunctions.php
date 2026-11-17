@@ -440,7 +440,7 @@
                         // Si on a défini des domaines à exclure et qu'il ne sont pas initialisé en majuscule
                         if (defined('EXCLUDE_USERDOMAIN') and count($excludeDomainsArray)==0)
                         {
-                            $excludeDomainsArray = array_map('strtolower', EXCLUDE_USERDOMAIN);
+                            $excludeDomainsArray = array_map('mb_strtolower', EXCLUDE_USERDOMAIN);
                         }
                         foreach($resultJson->data as $userKey => $userResource)
                         {
@@ -451,7 +451,7 @@
                             }
                             else
                             {
-                                $userDomain = strtolower(explode('@',$userResource['urn:ietf:params:scim:schemas:extension:custom:2.0:User']['eduPersonPrincipalName'])[1]);
+                                $userDomain = mb_strtolower(explode('@',$userResource['urn:ietf:params:scim:schemas:extension:custom:2.0:User']['eduPersonPrincipalName'])[1]);
                                 if (in_array($userDomain,$excludeDomainsArray))
                                 {
                                     // Si le domaine de l'EPPN est un domaine exclu, alors on le supprime
@@ -1519,7 +1519,7 @@
             if (defined('CIAMROLES'))
             {
                 // On passe tous les noms des rôles CIAM en majuscule
-                $uppercaseCiamRoles = array_map('strtoupper',CIAMROLES);
+                $uppercaseCiamRoles = array_map('mb_strtoupper',CIAMROLES);
             }
 
             $infos = explode(';',$lineInfos);
@@ -1549,7 +1549,7 @@
                 if ($ciamElement != '')
                 {
                     // On passe en majuscule l'élément recherché
-                    $ciamElement = strtoupper($ciamElement);
+                    $ciamElement = mb_strtoupper($ciamElement);
 
                     // On va chercher dans les noms des rôles CIAM (=> Donc dans le tableau CIAMROLES s'il est déclaré)
                     if (in_array($ciamElement,$uppercaseCiamRoles) and ENABLE_ROLE_CIAM)

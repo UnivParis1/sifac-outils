@@ -140,7 +140,7 @@
                 echo "<td class='missioncell align_right'>" . $mission->paiement . "</td>";
                 echo "<td class='missioncell'>" . $mission->datepaiement . "</td>";
                 echo "<td class='missioncell'>" . $mission->missionid . "</td>";
-                echo "<td class='missioncell'>" . strtolower("du " . datetextuelle($mission->datedebut) . " au " . datetextuelle($mission->datefin)) . "</td>";
+                echo "<td class='missioncell'>" . mb_strtolower("du " . datetextuelle($mission->datedebut) . " au " . datetextuelle($mission->datefin)) . "</td>";
                 echo "      </tr>";
             }
         }

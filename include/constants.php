@@ -80,10 +80,10 @@
     ////////////////////////////////////////////////////
     // Configuration des droits d'accès par CIAMGroups
     ////////////////////////////////////////////////////
-    define('CIAMGROUPACCESS_ADMIN', ['ADMIN_PRINCIPAL', strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_ADMIN)]);
-    define('CIAMGROUPACCESS_CREATE', array_merge(CIAMGROUPACCESS_ADMIN,[strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_CREATE)]));
-    define('CIAMGROUPACCESS_MODIFY', array_merge(CIAMGROUPACCESS_CREATE,[strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_MODIFY)]));
-    define('CIAMGROUPACCESS_CONSULT', array_merge(CIAMGROUPACCESS_MODIFY,[strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_CONSULT)]));
+    define('CIAMGROUPACCESS_ADMIN', ['ADMIN_PRINCIPAL', mb_strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_ADMIN)]);
+    define('CIAMGROUPACCESS_CREATE', array_merge(CIAMGROUPACCESS_ADMIN,[mb_strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_CREATE)]));
+    define('CIAMGROUPACCESS_MODIFY', array_merge(CIAMGROUPACCESS_CREATE,[mb_strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_MODIFY)]));
+    define('CIAMGROUPACCESS_CONSULT', array_merge(CIAMGROUPACCESS_MODIFY,[mb_strtoupper(INTERNAL_ROLE_PREFIX . INTERNAL_ROLE_CONSULT)]));
 
     // Méthodes internes pour les WS
     const INTERNALWS_DELCIAMTOKEN = 'delciamtoken';
@@ -91,6 +91,7 @@
     const INTERNALWS_DELROLECACHE = 'delrolecache';
     const INTERNALWS_SIFACROLELISTE = 'sifacroleliste';
     const INTERNALWS_CREATECIAMIDENT = 'createciamident';
+    const INTERNALWS_LDAPSEARCH = 'ldapsearch';
 
     // Liste des messages d'erreur HTTP possibles dans un CURL
     const HTTP_ERROR_MSG = [100 => "Continue", 

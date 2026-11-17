@@ -239,7 +239,7 @@
         // Pour chaque groupe, on regarde s'il est dans la liste des groupes autorisés.
         foreach($ciamGroupList as $ciamgroupdata)
         {
-            if (in_array(strtoupper($ciamgroupdata['display']),$ciamrolefilter))
+            if (in_array(mb_strtoupper($ciamgroupdata['display']),$ciamrolefilter))
             {
                 // On a trouvé un groupe qui correspond => On sort et on retourne true;
                 $errlog = "Le groupe " . $ciamgroupdata['display'] . " est dans la liste des groupes de l'utilisateur " . $uid;
@@ -253,9 +253,9 @@
         // * on n'a pas trouvé l'identité dans le CIAM,
         // * l'identité n'est dans aucun groupe autorisé
         // on cherche alors si l'identité est dans le tableau des personnes autorisées USERID_ALLOWED
-        $uid = strtolower($uid);
+        $uid = mb_strtolower($uid);
         $useridallowed = array_change_key_case(USERID_ALLOWED,CASE_LOWER);
-        if (!isset($useridallowed[$uid]) and array_search(strtolower($uid), array_map('strtolower', $useridallowed))===false)
+        if (!isset($useridallowed[$uid]) and array_search(mb_strtolower($uid), array_map('mb_strtolower', $useridallowed))===false)
         {
             $errlog = "L'uid de l'utilisateur n'est pas dans la liste des personnes autorisées.";
             error_log(basename(__FILE__) . " " . stripAccents($errlog));
@@ -366,7 +366,7 @@
             return $value;
         }
 
-        switch (trim(strtoupper($value . '')))
+        switch (trim(mb_strtoupper($value . '')))
         {
             case '':
                 return false;

@@ -80,6 +80,7 @@
     const LDAP_AGENT_EPPN_ATTR = 'edupersonprincipalname';
     const LDAP_AGENT_DISPLAYNAME_ATTR = 'displayname';
     const LDAP_AGENT_BIRTHDAY_ATTR = 'supannoidcdatedenaissance';
+    const LDAP_AGENT_CN_ATTR = 'cn';
     // Attention : l'attribut LDAP_AGENT_NUMAGENTSIHAM_ATTR n'est pas normalisé dans eSupLDAP
     // Il est donc à personnaliser en fonction de l'établissement
     const LDAP_AGENT_NUMAGENTSIHAM_ATTR = 'x-ns-siham';

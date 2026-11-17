@@ -356,7 +356,7 @@
                 $sifacQuery->querytype = SifacSqlMode::QUERY_ECC;
                 $sifacQuery->selectclause = array('BNAME', 'PARVA');
                 $sifacQuery->fromclause = 'USR05';
-                $sifacQuery->whereclause = ["PARVA LIKE '" . strtoupper($uid)  . "%'",
+                $sifacQuery->whereclause = ["PARVA LIKE '" . mb_strtoupper($uid)  . "%'",
                                             " AND PARID = 'ZUSER_CATALOG'"
                                         ];
             }
@@ -367,7 +367,7 @@
                 $sifacQuery->querytype = SifacSqlMode::QUERY_POSTGRE;
                 $sifacQuery->selectclause = array('BNAME', 'PARVA');
                 $sifacQuery->fromclause = 'USR05';
-                $sifacQuery->whereclause = ["parva=like." . strtoupper($uid)  . "*",
+                $sifacQuery->whereclause = ["parva=like." . mb_strtoupper($uid)  . "*",
                                             "parid=eq.ZUSER_CATALOG"
                                             ];
                 // $response->status = ResponseStatus::STATUT_KO;
@@ -387,8 +387,8 @@
                 {
                     $tempString = explode('@', $eppn);
                     $response->status = ResponseStatus::STATUT_OK;
-                    $response->data[trim($tempString[0])] = trim(strtoupper($tempString[0]));
-                    error_log(basename(__FILE__) . stripAccents(" On passe au plan B => Récupération à partir de l'EPPN : " . trim(strtoupper($tempString[0]))));
+                    $response->data[trim($tempString[0])] = trim(mb_strtoupper($tempString[0]));
+                    error_log(basename(__FILE__) . stripAccents(" On passe au plan B => Récupération à partir de l'EPPN : " . trim(mb_strtoupper($tempString[0]))));
                     $eppnLoginList[$eppn] = $response->data[trim($tempString[0])];
                 }
                 else
@@ -402,7 +402,7 @@
             }
             $login = trim(reset($response_USR05->data)['BNAME']);
             error_log(basename(__FILE__) . stripAccents(" On a trouvé le login $login pour l'eppn $eppn.")); 
-            $response->data[$login] = strtoupper($login);
+            $response->data[$login] = mb_strtoupper($login);
             $eppnLoginList[$eppn] = $response->data[$login];
             return $response;
         }
@@ -647,7 +647,7 @@
             $login = trim(reset($response_USR21->data)['BNAME']);
             error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " On a trouvé le login $login pour le mail $mail."));
             $response->description = '';
-            $response->data[$login] = strtoupper($login);
+            $response->data[$login] = mb_strtoupper($login);
             $mailLoginList[$mail] = $response->data[$login];
 
             return $response;
@@ -670,7 +670,7 @@
          */
         public function getEppnFromSifacLogin(string $sifacLogin, SifacSqlMode $sqlMode) :string
         {
-            $sifacLogin = trim(strtoupper($sifacLogin));
+            $sifacLogin = trim(mb_strtoupper($sifacLogin));
             static $loginEppnList = [];
 
             if (isset($loginEppnList[$sifacLogin]))
@@ -689,7 +689,7 @@
                 $sifacQuery->selectclause = ['bname','parva'];
                 $sifacQuery->fromclause = 'usr05';
                 $sifacQuery->whereclause = [
-                                            "bname eq '" . trim(strtoupper($sifacLogin))  . "' and parid eq 'ZUSER_CATALOG'"
+                                            "bname eq '" . trim(mb_strtoupper($sifacLogin))  . "' and parid eq 'ZUSER_CATALOG'"
                                             ];
             }
             else if($sqlMode == SifacSqlMode::QUERY_ECC)
@@ -699,7 +699,7 @@
                 $sifacQuery->querytype = SifacSqlMode::QUERY_ECC;
                 $sifacQuery->selectclause = array('BNAME', 'PARVA');
                 $sifacQuery->fromclause = 'USR05';
-                $sifacQuery->whereclause = ["BNAME = '" . strtoupper($sifacLogin)  . "'",
+                $sifacQuery->whereclause = ["BNAME = '" . mb_strtoupper($sifacLogin)  . "'",
                                             " AND PARID = 'ZUSER_CATALOG'"
                                            ];
             }
@@ -808,7 +808,7 @@
             $sifacQuery->whereclause = ["(AGR_NAME = '' "];
             foreach($internalArray as $rolename => $description)
             {
-                $sifacQuery->whereclause[] = " OR AGR_NAME = '" .  strtoupper(trim($rolename)) . "'";
+                $sifacQuery->whereclause[] = " OR AGR_NAME = '" . mb_strtoupper(trim($rolename)) . "'";
             }
             $sifacQuery->whereclause[] = ") AND LINE = 0 AND SPRAS = 'F'";
             ///////////////////////////////////////////////////////////  
@@ -854,7 +854,7 @@
             }
             static $roledescriptionliste = array();
 
-            $roleName = strtoupper(trim($roleName));
+            $roleName = mb_strtoupper(trim($roleName));
             $roleDescription = '';
 
             if (isset($roledescriptionliste[$roleName]))
@@ -921,7 +921,7 @@
                 $sifacQuery->whereclause = [];
                 if (is_string($sifacLogin))
                 {
-                    $sifacQuery->whereclause = ["bname eq '" . trim(strtoupper($sifacLogin)) . "' "];
+                    $sifacQuery->whereclause = ["bname eq '" . trim(mb_strtoupper($sifacLogin)) . "' "];
                 }
                 else if (is_array($sifacLogin))
                 {
@@ -936,7 +936,7 @@
                         {
                             $or = '';
                         }
-                        $sifacQuery->whereclause[] = "$or bname eq '" . trim(strtoupper($userlogin->login)) . "' ";
+                        $sifacQuery->whereclause[] = "$or bname eq '" . trim(mb_strtoupper($userlogin->login)) . "' ";
                     }
                 }
             }
@@ -950,7 +950,7 @@
                 $sifacQuery->whereclause = [];
                 if (is_string($sifacLogin))
                 {
-                    $login = strtoupper($sifacLogin);
+                    $login = mb_strtoupper($sifacLogin);
                     $sifacQuery->whereclause = ["BNAME = '" . $login . "' "];
                 }
                 else if (is_array($sifacLogin))
@@ -966,7 +966,7 @@
                         {
                             $or = '';
                         }
-                        $sifacQuery->whereclause[] = "$or BNAME = '" . strtoupper($userlogin->login) . "' ";
+                        $sifacQuery->whereclause[] = "$or BNAME = '" . mb_strtoupper($userlogin->login) . "' ";
                     }
                 }
             }
@@ -1534,7 +1534,7 @@
         public function getSifacRoleByUser(SifacUserClass $sifacUser, SifacSqlMode $sqlMode) :ResponseClass
         {
             $response = new ResponseClass();
-            $login = strtoupper($sifacUser->login);
+            $login = mb_strtoupper($sifacUser->login);
             error_log(basename(__FILE__) . stripAccents(" " . __FUNCTION__ . " Le login est " . $login));  
 
             $sifacQuery = new SifacQueryClass();
@@ -1633,9 +1633,9 @@
             $curl = curl_init();
             $paramsString = "";
 
-            $fullurl = SIFAC_ENTREPOT_URL . strtolower($sifacQuery->fromclause);
+            $fullurl = SIFAC_ENTREPOT_URL . mb_strtolower($sifacQuery->fromclause);
 
-            $select = strtolower('select=' . implode(',', $sifacQuery->selectclause));
+            $select = mb_strtolower('select=' . implode(',', $sifacQuery->selectclause));
             $clause = rawurlencode(trim(implode('&' ,$sifacQuery->whereclause))); // implode('&', $sifacQuery->whereclause);
             // $clause = urlencode(trim(implode('&' ,$sifacQuery->whereclause))); // implode('&', $sifacQuery->whereclause);
             $dummy = 'dummy=' .  time();
@@ -1735,7 +1735,7 @@
             $wherearray = [];
             foreach ($sifacQuery->whereclause as $where)
             {
-                $wherearray[] = array('TEXT' => strtoupper($where));
+                $wherearray[] = array('TEXT' => mb_strtoupper($where));
             }
             // error_log(basename(__FILE__) . stripAccents(" Le wherearray = " . print_r($wherearray,true)));
 
@@ -1823,7 +1823,7 @@
 
             $paramsString = "";
 
-            $url = SIFAC_DIRECT_URL . "?nom=" . strtolower($sifacQuery->fromclause);
+            $url = SIFAC_DIRECT_URL . "?nom=" . mb_strtolower($sifacQuery->fromclause);
             $select = '%24select=' . rawurlencode(implode(',', $sifacQuery->selectclause));
             // var_dump($select);
             $clause = '%24filter=' . rawurlencode(trim(implode(' ' ,$sifacQuery->whereclause)));
@@ -2128,8 +2128,8 @@
 
                 if ($matricule == '')
                 {
-                    $nom = '%' . strtoupper(preg_replace("#[^A-Z0-9]+#i", "%", trim(stripAccents($nom)))) . '%';
-                    $prenom = '%' . strtoupper(preg_replace("#[^A-Z0-9]+#i", "%", trim(stripAccents($prenom)))) . '%';
+                    $nom = '%' . mb_strtoupper(preg_replace("#[^A-Z0-9]+#i", "%", trim(stripAccents($nom)))) . '%';
+                    $prenom = '%' . mb_strtoupper(preg_replace("#[^A-Z0-9]+#i", "%", trim(stripAccents($prenom)))) . '%';
 
                     // Si plusieurs '%' se suivent, on le remplace par un seul
                     $nom = preg_replace("#[%]+#i", "%", $nom);
@@ -2904,7 +2904,7 @@
 
             $response = new ResponseClass();
 
-            $transaction = trim(strtoupper($sifacTransaction));
+            $transaction = trim(mb_strtoupper($sifacTransaction));
             $sifacQuery = new SifacQueryClass();
 
             if ($sqlMode == SifacSqlMode::QUERY_DIRECT)
@@ -3059,7 +3059,7 @@
         public function getFinancialStructureByUser(array $userList, SifacSqlMode $sqlMode) :ResponseClass
         {
             $t0 = microtime(true);
-            $listeutilisateurs = array_map('strtoupper',$userList);
+            $listeutilisateurs = array_map('mb_strtoupper',$userList);
 
             $response = new ResponseClass();
 

@@ -90,6 +90,55 @@
 
         switch ($methode)
         {
+            case INTERNALWS_LDAPSEARCH :
+                // Attention : On ne peut pas créer une identité via un token bearer
+                // Uniquement via utilisateur CAS
+                if (!cas_user_check_access($casUid, CIAMGROUPACCESS_CONSULT))
+                {
+                    $response->status = ResponseStatus::STATUT_KO;
+                    $response->description = 'Vous n\'êtes pas autorisé à accéder à ce service.';
+                    $response->data = array();
+                }
+                else
+                {
+                    $inputdata = trim($inputdata);
+                    // error_log(basename(__FILE__) . stripAccents(" On va chercher dans LDAP : $inputdata"));
+                    if (mb_strlen($inputdata) < 4) 
+                    {
+                        $response->status = ResponseStatus::STATUT_KO;
+                        $response->description = 'Longueur de critère de recherche non respecté.';
+                        $response->data = array();
+                    }
+                    else
+                    {
+                        $ldapFunctions = new LdapFunctions();
+                        if (!defined('LDAP_AGENT_CN_ATTR'))
+                        {
+                            define('LDAP_AGENT_CN_ATTR','');
+                        }
+                        $response = $ldapFunctions->getLDAPInfos(
+                                                        $inputdata,
+                                                        [   LDAP_AGENT_MAIL_ATTR,
+                                                            LDAP_AGENT_NOM_ATTR,
+                                                            LDAP_AGENT_PRENOM_ATTR,
+                                                            LDAP_AGENT_EPPN_ATTR,
+                                                            LDAP_AGENT_DISPLAYNAME_ATTR,
+                                                            LDAP_AGENT_UID_ATTR,
+                                                            LDAP_AGENT_CN_ATTR
+                                                        ],
+                                                        [   LDAP_AGENT_EPPN_ATTR,
+                                                            LDAP_AGENT_NOM_ATTR,
+                                                            LDAP_AGENT_PRENOM_ATTR,
+                                                            LDAP_AGENT_MAIL_ATTR,
+                                                            LDAP_AGENT_DISPLAYNAME_ATTR,
+                                                            LDAP_AGENT_UID_ATTR
+                                                        ],
+                                                        // LdapSearchClass::LDAP_OPTION_ONE_RESPONSE
+                                                        LdapSearchClass::LDAP_OPTION_ALL_RESPONSES
+                                                                );
+                    }
+                }
+                break;
             case INTERNALWS_CREATECIAMIDENT :
                 // Attention : On ne peut pas créer une identité via un token bearer
                 // Uniquement via utilisateur CAS
@@ -101,7 +150,6 @@
                 }
                 else
                 {
-                    error_log(basename(__FILE__) . stripAccents(" On va créer une identité..."));
                     $ciamfunctions = new CiamFunctions();
                     $response = $ciamfunctions->checkAndCreateIdentity($inputdata, $sqlmode);
                 }
