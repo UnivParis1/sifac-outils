@@ -90,6 +90,7 @@ Par exemple : "personnes avec une affiliation 'member' ( = en activité) et qui 
 - `LDAP_AGENT_UID_ATTR` : Attribut LDAP contenant l'identifiant de connexion de l'employé
 - `LDAP_AGENT_EPPN_ATTR` : Attribut LDAP contenant l'EPPN de l'employé
 - `LDAP_AGENT_DISPLAYNAME_ATTR` : Attribut LDAP contenant le nom complet de l'employé
+- `LDAP_AGENT_CN_ATTR` : Attribut LDAP contenant le nom complet de l'employé
 - `LDAP_AGENT_BIRTHDAY_ATTR` : Attribut LDAP contenant la date de naissance de l'employé (utilisé dans la recherche de missions)
 - `LDAP_AGENT_NUMAGENTSIHAM_ATTR` : Attribut LDAP contenant l'identifiant SIHAM/RH de l'employé (utilisé dans la recherche de missions)
 
