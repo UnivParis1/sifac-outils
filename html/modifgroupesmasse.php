@@ -211,6 +211,7 @@
     echo "</select>";
     echo '<br>';
     echo '<br>';
+    $eppnListArray = [];
     if ($selectedGroup->id == $groupId and $groupId != '')
     {
         $tableName = "tableGroupIdent";
@@ -261,7 +262,7 @@
                     <td class="cellulesimple cursorpointer"><?php echo htmlentities($ciamUser->name); ?></td>
                     <td class="cellulesimple"><?php echo htmlentities($ciamUser->firstname); ?></td>
                     <td class="cellulesimple"><?php echo htmlentities($ciamUser->mail); ?></td>
-                    <td class="cellulesimple <?php echo LDAPEPPNCELLULE; ?>"><?php echo htmlentities($ciamUser->eppn); ?></td>
+                    <td class="cellulesimple <?php echo LDAPEPPNCELLULE; ?>"><?php echo htmlentities($ciamUser->eppn); $eppnListArray[] = $ciamUser->eppn; ?></td>
                     <td class="cellulesimple"><button class="sifacbouton sifacsupprbouton" name="suppridbutton[]" id="suppridbutton[]" type="button" onclick="removeIdentity(this);">Supprimer</button>
                     <input type='hidden' name='userIdArray[]' id='userIdArray[]' class='useridinput' value='<?php echo $ciamUser->id; ?>'/>
                 </tr>
@@ -294,6 +295,9 @@
         {
             $ciamUser = new CiamUserClass();
             $ciamUser->load($resource);
+            // Si l'identité n'est pas dans la liste des eppn déjà enregistré dans le groupe => On l'affiche
+            if (!in_array($ciamUser->eppn, $eppnListArray))
+            {
 ?>
             <option value='<?php echo $ciamUser->id; ?>' 
                     <?php echo ATTR_EPPN . "='" . $ciamUser->eppn . "'" ?> 
@@ -303,6 +307,7 @@
                     <?php echo ATTR_CIAMUSERMAIL . "='" . htmlspecialchars($ciamUser->mail) . "'" ?>
             ><?php echo $ciamUser->name . " " . $ciamUser->firstname . ' &lt;' . $ciamUser->mail . '&gt;'; ?></option>
 <?php
+            }
         }
 ?>
     </select>
@@ -413,6 +418,7 @@
             newCell.classList.add('cellulesimple');
             delButton = table.ownerDocument.createElement('button');
             delButton.classList.add('sifacbouton', 'sifacsupprbouton');
+            delButton.type = 'button';
             delButton.name = 'suppridbutton[]';
             delButton.id = delButton.name;
             delButton.textContent = 'Supprimer';
@@ -424,7 +430,8 @@
             hiddenInput.classList.add('useridinput')
             hiddenInput.id = hiddenInput.name;
             hiddenInput.value = idValue;
-            newRow.appendChild(hiddenInput);
+            // newRow.appendChild(hiddenInput);
+            newCell.appendChild(hiddenInput);
 
             // On va retrier le tableau
             resortTable(table.id);
@@ -445,6 +452,7 @@
             if (currentRow)
             {
                 let eppnCell = currentRow.getElementsByClassName('<?php echo LDAPEPPNCELLULE; ?>')[0];
+                let userIdInput = currentRow.getElementsByClassName('useridinput')[0];
                 let eppnValue = '';
                 if (eppnCell)
                 {
@@ -456,8 +464,33 @@
                     return false;
                 }
 
-                currentTable = currentRow.closest('table');
-                currentTable.deleteRow(currentRow.rowIndex);
+                if (currentRow.classList.contains('userremoved'))
+                {
+                    currentRow.classList.remove('userremoved');
+                    button.textContent = "Supprimer";
+                    button.classList.add('sifacsupprbouton');
+                    button.classList.remove('sifacannulerbouton');
+                    if (userIdInput)
+                    {
+                        userIdInput.disabled = false;
+                    }
+                }
+                else if (currentRow.classList.contains('nouvelleligne'))
+                {
+                    currentTable = currentRow.closest('table');
+                    currentTable.deleteRow(currentRow.rowIndex);
+                }
+                else
+                {
+                    currentRow.classList.add('userremoved');
+                    button.textContent = "Réactiver";
+                    button.classList.add('sifacannulerbouton');
+                    button.classList.remove('sifacsupprbouton');
+                    if (userIdInput)
+                    {
+                        userIdInput.disabled = true;
+                    }
+                }
             }
             return false;
         }

@@ -337,6 +337,18 @@ th[scope~="row"] {
     white-space:pre;
 }
 
+tr.userremoved {
+  /* Dessine un trait noir de 1px exactement au centre vertical (50%) */
+  background-image: linear-gradient(
+    to bottom,
+    transparent calc(50% - 1px),
+    #ff0000 calc(50% - 1px), /* Couleur du trait */
+    #ff0000 calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+  color: #888; /* Optionnel : grise le texte pour renforcer l'effet */
+}
+
 /**********************************/
 /* Modificateur de tailles        */
 /**********************************/

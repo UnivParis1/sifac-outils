@@ -7,7 +7,7 @@
     ///////////////////////////////////////////////////////////////////////////////////////
 
     // Vesion de la bibliothèque d'outils
-    const SIFAC_OUTILS_VERSION = '0.18';
+    const SIFAC_OUTILS_VERSION = '0.19';
 
     // Liste des actions possibles (identite.php)
     const CREATE_USER_RESOURCE = 'CREATEUSERRESOURCE';
